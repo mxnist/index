@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>イベントプログラムタイマー</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: #121212; 
+            --text-color: #aaaaaa; 
+            --title-color: #ffffff;
+            --accent-color: #00ff00; /* 蛍光グリーン */
+            --clock-color: #00ffff;  /* シアン */
+            
+            --btn-bg: #222222;
+            --btn-text: #888888;
+            --btn-hover: #333333;
+            --btn-border: #444444;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #666666; 
+            font-size: 1.2rem;
+            font-weight: normal;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #222;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        /* タイマー表示部分 */
+        .timer-display {
+            text-align: center;
+            padding: 30px 20px;
+            transition: all 0.3s ease;
+        }
+
+        /* フルスクリーン時のスタイル */
+        .timer-display:fullscreen {
+            background-color: #000000;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            padding: 5vh 5vw;
+        }
+
+        /* 日付・時刻共通スタイル */
+        .top-info {
+            font-size: 1.2rem;
+            color: var(--clock-color);
+            font-family: monospace;
+            margin-bottom: 10px;
+            opacity: 0.8;
+            letter-spacing: 2px;
+        }
+        .timer-display:fullscreen .top-info {
+            font-size: 3.8rem;
+            margin-bottom: 3vh;
+            opacity: 0.9;
+        }
+
+        /* プログラムタイトル */
+        .current-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--title-color);
+        }
+        .timer-display:fullscreen .current-title {
+            font-size: 4.5rem;
+            margin-bottom: 1vh;
+        }
+
+        /* タイマー数字 */
+        .time-left {
+            font-size: 5.5rem;
+            font-weight: bold;
+            font-family: monospace;
+            color: var(--accent-color);
+            text-shadow: 0 0 12px rgba(0, 255, 0, 0.4);
+            margin: 5px 0;
+        }
+        .timer-display:fullscreen .time-left {
+            font-size: 18rem; 
+            line-height: 1;
+            margin: 2vh 0;
+            text-shadow: 0 0 35px rgba(0, 255, 0, 0.8);
+        }
+
+        /* 待機時時計の秒数（蛍光赤・小さめ）のスタイル */
+        .sec-red {
+            font-size: 0.7em;
+            color: #ff3333;
+            text-shadow: 0 0 12px rgba(255, 51, 51, 0.5);
+        }
+        .timer-display:fullscreen .sec-red {
+            text-shadow: 0 0 35px rgba(255, 51, 51, 0.8);
+        }
+
+        /* 次のプログラム */
+        .next-title {
+            font-size: 1.1rem;
+            color: #666666;
+        }
+        .timer-display:fullscreen .next-title {
+            font-size: 2.8rem;
+            color: #555555;
+            margin-top: 2vh;
+        }
+
+        /* コントロールボタン */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            border: 1px solid var(--btn-border);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background-color: var(--btn-hover);
+            color: #ffffff;
+            border-color: #666666;
+        }
+        button:disabled {
+            background-color: #0a0a0a;
+            border-color: #1a1a1a;
+            color: #333333;
+            cursor: not-allowed;
+        }
+
+        button.btn-delete {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            background-color: #2a1515;
+            color: #aa6666;
+            border-color: #442222;
+        }
+        button.btn-delete:hover {
+            background-color: #441111;
+            color: #ff9999;
+            border-color: #662222;
+        }
+
+        button.btn-edit {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            background-color: #15222a;
+            color: #668caa;
+            border-color: #223344;
+        }
+        button.btn-edit:hover {
+            background-color: #112e44;
+            color: #99ccff;
+            border-color: #224466;
+        }
+
+        button.btn-sound {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            min-width: 32px;
+        }
+        button.btn-sound.sound-on {
+            background-color: #152a1a;
+            color: #66aa77;
+            border-color: #22442b;
+        }
+        button.btn-sound.sound-on:hover {
+            background-color: #1a4422;
+            color: #aaffbb;
+        }
+        button.btn-sound.sound-off {
+            background-color: #222222;
+            color: #555555;
+            border-color: #333333;
+        }
+        button.btn-sound.sound-off:hover {
+            background-color: #333333;
+            color: #888888;
+        }
+
+        button#btn-submit {
+            background-color: #1a2a1a;
+            color: #88aa88;
+            border-color: #224422;
+        }
+        button#btn-submit:hover {
+            background-color: #224422;
+            color: #aaffaa;
+            border-color: #336633;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 0.8rem;
+        }
+        .timer-display:fullscreen .fullscreen-btn {
+            top: 30px;
+            right: 30px;
+            font-size: 1.2rem;
+            opacity: 0.2;
+        }
+        .fullscreen-btn:hover {
+            opacity: 1.0;
+        }
+
+        /* タイムテーブル設定フォーム */
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .form-row .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .form-row .form-group.flex-grow {
+            flex: 1;
+            min-width: 180px;
+        }
+        label {
+            font-size: 0.8rem;
+            color: #666666;
+        }
+        input[type="time"], input[type="text"], input[type="number"], select {
+            background-color: #161616;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #999999;
+            padding: 8px;
+            font-size: 0.9rem;
+            font-family: monospace;
+            box-sizing: border-box;
+        }
+        input[type="text"], select {
+            font-family: sans-serif;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #555555;
+            color: #ffffff;
+        }
+        input[type="number"] {
+            width: 90px;
+        }
+
+        /* 進行一覧 */
+        .table-list {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .table-list th, .table-list td {
+            border: 1px solid #222;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .table-list th {
+            background-color: #161616;
+            color: #888888;
+        }
+
+        .active-row {
+            background-color: #1a252f !important;
+            color: #ffffff;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        /* 保存管理エリア */
+        .storage-zone {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #333;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⏱️ PROGRAM TIMER</h1>
+
+    <div id="timer-area" class="card timer-display">
+        <button class="fullscreen-btn" onclick="toggleFullscreen()">🗖 全画面化</button>
+        
+        <div id="top-info" class="top-info"></div>
+
+        <div id="current-title" class="current-title">プログラムが登録されていません</div>
+
+        <div id="time-left" class="time-left">00:00</div>
+        
+        <div id="next-title" class="next-title">次：--</div>
+
+        <div class="controls">
+            <button id="btn-start" onclick="startTimer()">手動スタート</button>
+            <button id="btn-pause" onclick="pauseTimer()" disabled>一時停止</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 id="form-heading" style="color:#888; font-size:1rem; margin-top:0;">📋 プログラム追加</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label id="label-start" for="input-start">開始時刻</label>
+                <input type="time" id="input-start" value="08:00" oninput="onStartTimeInput()">
+            </div>
+            <div class="form-group">
+                <label for="input-duration">所要時間 (分)</label>
+                <input type="number" id="input-duration" min="1" placeholder="例: 15" oninput="calculateEndTime()">
+            </div>
+            <div style="color: #444; margin-top: 20px;">➔</div>
+            <div class="form-group">
+                <label for="input-end">終了時刻</label>
+                <input type="time" id="input-end" readonly style="opacity: 0.6; cursor: not-allowed;">
+            </div>
+            <div class="form-group flex-grow">
+                <label for="input-title">プログラム名</label>
+                <input type="text" id="input-title" placeholder="例: パネルディスカッション">
+            </div>
+            <button id="btn-submit" onclick="submitFormItem()" style="margin-top: 20px;">追加する</button>
+            <button id="btn-cancel-edit" onclick="cancelEditMode()" style="margin-top: 20px; display: none;">キャンセル</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="color:#888; font-size:1rem; margin-top:0;">📊 進行スケジュール</h3>
+        <table class="table-list">
+            <thead>
+                <tr>
+                    <th style="width: 60px;">順番</th>
+                    <th style="width: 160px;">時間帯</th>
+                    <th>プログラム名</th>
+                    <th style="width: 200px; text-align: center;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="timetable-body">
+            </tbody>
+        </table>
+
+        <div class="storage-zone">
+            <div class="form-group">
+                <label for="save-name">このスケジュールを保存</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="save-name" placeholder="例: 定例会パターンA" style="width: 180px;">
+                    <button onclick="saveTimetableToStorage()">保存</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="load-select">保存済みから呼び出し</label>
+                <div style="display: flex; gap: 5px;">
+                    <select id="load-select" style="width: 180px;">
+                        <option value="">-- 選択してください --</option>
+                    </select>
+                    <button onclick="loadTimetableFromStorage()">読込</button>
+                    <button class="btn-delete" onclick="deleteTimetableFromStorage()" style="padding: 8px 12px;">削除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let baseStartTimeStr = "08:00"; 
+    let timetableRaw = [];
+    
+    let timetableParsed = [];
+    let currentIndex = -1;
+    let editTargetIndex = -1; 
+    let insertTargetIndex = -1; 
+    let timeLeft = 0; 
+    let timerInterval = null;
+    let isPaused = false;
+    let dayOffset = 0; 
+    let pauseStartTime = null; 
+
+    const defaultSampleData = {
+        baseStartTimeStr: "07:30",
+        timetableRaw: [
+            { duration: 48, title: "登校", sound: false },
+            { duration: 7, title: "朝学習", sound: false },
+            { duration: 5, title: "朝会", sound: false },
+            { duration: 10, title: "休み時間", sound: false },
+            { duration: 50, title: "1時間目", sound: false },
+            { duration: 10, title: "休み時間", sound: false },
+            { duration: 50, title: "2時間目", sound: false },
+            { duration: 10, title: "休み時間", sound: false },
+            { duration: 50, title: "3時間目", sound: false },
+            { duration: 10, title: "休み時間", sound: false },
+            { duration: 50, title: "4時間目", sound: false },
+            { duration: 40, title: "給食", sound: false },
+            { duration: 30, title: "昼休み", sound: false },
+            { duration: 50, title: "5時間目", sound: false },
+            { duration: 10, title: "休み時間", sound: false },
+            { duration: 60, title: "6時間目", sound: false },
+            { duration: 5, title: "休み時間", sound: false },
+            { duration: 10, title: "帰会", sound: false }
+        ]
+    };
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep() {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5); 
+    }
+
+    function updateClock() {
+        const now = new Date();
+
+        if (timetableParsed.length > 0 && timerInterval && !isPaused) {
+            checkAndSyncTime(now);
+        } else {
+            updateDisplayOnly();
+        }
+    }
+    setInterval(updateClock, 1000);
+    updateClock(); 
+
+    function toggleFullscreen() {
+        const timerArea = document.getElementById('timer-area');
+        if (!document.fullscreenElement) {
+            timerArea.requestFullscreen().catch(err => {
+                alert(`全画面表示への切り替えに失敗しました: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    function refreshTimetableStructure(keepTimerAlive = false, previousActiveTitle = null, skipBackup = false) {
+        if (!baseStartTimeStr) baseStartTimeStr = "08:00";
+        let currentTrackTime = baseStartTimeStr;
+
+        timetableParsed = timetableRaw.map(item => {
+            let startStr = currentTrackTime;
+            let endStr = addMinutesToTimeStr(startStr, item.duration);
+            currentTrackTime = endStr; 
+
+            return {
+                start: timeStringToDate(startStr, dayOffset),
+                end: timeStringToDate(endStr, dayOffset),
+                title: item.title,
+                startStr: startStr,
+                endStr: endStr,
+                sound: item.sound !== undefined ? item.sound : true
+            };
+        });
+
+        setupNextFormPlaceholder();
+
+        if (keepTimerAlive && previousActiveTitle !== null) {
+            const newIdx = timetableParsed.findIndex(item => item.title === previousActiveTitle);
+            if (newIdx !== -1) {
+                currentIndex = newIdx; 
+                updateDisplayOnly();
+                return; 
+            }
+        }
+
+        autoSelectCurrentIndex();
+        
+        if (!keepTimerAlive) {
+            resetTimer();
+        } else {
+            updateDisplayOnly();
+        }
+
+        if (!skipBackup) {
+            saveAutoBackup();
+        }
+    }
+
+    function addMinutesToTimeStr(timeStr, minsToAdd) {
+        if (!timeStr) return "";
+        const parts = timeStr.split(':');
+        let hours = parseInt(parts[0], 10);
+        let minutes = parseInt(parts[1], 10);
+        minutes += minsToAdd;
+        hours += Math.floor(minutes / 60);
+        minutes = minutes % 60;
+        hours = hours % 24;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+
+    function formatTimeLeftString(totalSeconds) {
+        const hours = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+
+        if (hours > 0) {
+            return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        } else {
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+    }
+
+    function getHMSClockHTML() {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const seconds = now.getSeconds().toString().padStart(2, '0');
+        return `${hours}:${minutes}<span class="sec-red">:${seconds}</span>`;
+    }
+
+    function calculateEndTime() {
+        const startVal = document.getElementById('input-start').value;
+        const durationVal = parseInt(document.getElementById('input-duration').value, 10);
+
+        if (!startVal || isNaN(durationVal) || durationVal <= 0) {
+            document.getElementById('input-end').value = '';
+            return;
+        }
+        document.getElementById('input-end').value = addMinutesToTimeStr(startVal, durationVal);
+    }
+
+    function onStartTimeInput() {
+        if (timetableRaw.length === 0 || editTargetIndex === 0) {
+            baseStartTimeStr = document.getElementById('input-start').value || "08:00";
+        }
+        calculateEndTime();
+    }
+
+    function setupNextFormPlaceholder() {
+        if (editTargetIndex !== -1 || insertTargetIndex !== -1) return; 
+
+        if (timetableRaw.length === 0) {
+            if (!baseStartTimeStr) baseStartTimeStr = "08:00";
+            document.getElementById('input-start').value = baseStartTimeStr;
+            document.getElementById('input-start').disabled = false;
+            document.getElementById('label-start').textContent = "開始時刻";
+        } else {
+            let currentTrackTime = baseStartTimeStr;
+            timetableRaw.forEach(item => {
+                currentTrackTime = addMinutesToTimeStr(currentTrackTime, item.duration);
+            });
+            document.getElementById('input-start').value = currentTrackTime;
+            document.getElementById('input-start').disabled = true;
+            document.getElementById('label-start').textContent = "開始時刻 (自動連動)";
+        }
+        calculateEndTime();
+    }
+
+    function timeStringToDate(timeStr, offsetDays = 0) {
+        const now = new Date();
+        const parts = timeStr.split(':');
+        if (parts.length < 2) return null;
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays, parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
+    }
+
+    function submitFormItem() {
+        const duration = parseInt(document.getElementById('input-duration').value, 10);
+        const title = document.getElementById('input-title').value.trim();
+
+        if (isNaN(duration) || duration <= 0 || !title) {
+            alert('所要時間とプログラム名を正しく入力してください。');
+            return;
+        }
+
+        const wasRunning = (timerInterval !== null);
+        const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
+
+        if (editTargetIndex === -1) {
+            if (timetableRaw.length === 0) {
+                baseStartTimeStr = document.getElementById('input-start').value || "08:00";
+            }
+            if (insertTargetIndex !== -1) {
+                // 挿入時もデフォルトで音声をオフ(sound: false)にする
+                timetableRaw.splice(insertTargetIndex + 1, 0, { duration, title, sound: false });
+                cancelEditMode();
+            } else {
+                // デフォルト追加時の処理: sound: false
+                timetableRaw.push({ duration, title, sound: false });
+            }
+        } else {
+            if (editTargetIndex === 0) {
+                baseStartTimeStr = document.getElementById('input-start').value;
+            }
+            const currentSound = timetableRaw[editTargetIndex].sound !== undefined ? timetableRaw[editTargetIndex].sound : true;
+            timetableRaw[editTargetIndex] = { duration, title, sound: currentSound };
+            cancelEditMode();
+        }
+        
+        clearForm();
+        dayOffset = 0; 
+        refreshTimetableStructure(wasRunning, activeTitleBefore);
+    }
+
+    function editProgramItem(index) {
+        cancelEditMode(); 
+        editTargetIndex = index;
+        const item = timetableRaw[index];
+
+        let currentTrackTime = baseStartTimeStr;
+        for (let i = 0; i < index; i++) {
+            currentTrackTime = addMinutesToTimeStr(currentTrackTime, timetableRaw[i].duration);
+        }
+
+        document.getElementById('input-start').value = currentTrackTime;
+        document.getElementById('input-start').disabled = (index !== 0);
+        document.getElementById('label-start').textContent = index === 0 ? "開始時刻 (全体連動)" : "開始時刻 (固定)";
+        
+        document.getElementById('input-duration').value = item.duration;
+        document.getElementById('input-title').value = item.title;
+        
+        calculateEndTime();
+
+        document.getElementById('form-heading').textContent = `📝 プログラム [No.${index + 1}] を編集中`;
+        document.getElementById('btn-submit').textContent = "更新する";
+        document.getElementById('btn-cancel-edit').style.display = "inline-block";
+    }
+
+    function prepareInsertItem(index) {
+        cancelEditMode();
+        insertTargetIndex = index;
+
+        let currentTrackTime = baseStartTimeStr;
+        for (let i = 0; i <= index; i++) {
+            currentTrackTime = addMinutesToTimeStr(currentTrackTime, timetableRaw[i].duration);
+        }
+
+        document.getElementById('input-start').value = currentTrackTime;
+        document.getElementById('input-start').disabled = true;
+        document.getElementById('label-start').textContent = `開始時刻 (No.${index + 1}の後ろに挿入)`;
+
+        document.getElementById('form-heading').textContent = `➕ プログラム [No.${index + 1}] の後ろに挿入中`;
+        document.getElementById('btn-submit').textContent = "挿入する";
+        document.getElementById('btn-cancel-edit').style.display = "inline-block";
+    }
+
+    function cancelEditMode() {
+        editTargetIndex = -1;
+        insertTargetIndex = -1; 
+        clearForm();
+        document.getElementById('form-heading').textContent = "📋 プログラム追加";
+        document.getElementById('btn-submit').textContent = "追加する";
+        document.getElementById('btn-cancel-edit').style.display = "none";
+        setupNextFormPlaceholder();
+    }
+
+    function clearForm() {
+        document.getElementById('input-duration').value = '';
+        document.getElementById('input-title').value = '';
+        document.getElementById('input-end').value = '';
+    }
+
+    function deleteProgramItem(index) {
+        if (editTargetIndex === index || insertTargetIndex === index) cancelEditMode(); 
+        const wasRunning = (timerInterval !== null);
+        const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
+        
+        timetableRaw.splice(index, 1);
+        dayOffset = 0;
+        refreshTimetableStructure(wasRunning, activeTitleBefore);
+    }
+
+    function moveProgramItem(index, direction) {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= timetableRaw.length) return;
+
+        const temp = timetableRaw[index];
+        timetableRaw[index] = timetableRaw[newIndex];
+        timetableRaw[newIndex] = temp;
+
+        let currentTrackTime = baseStartTimeStr;
+        timetableParsed = timetableRaw.map(item => {
+            const startStr = currentTrackTime;
+            const endStr = addMinutesToTimeStr(startStr, item.duration);
+            currentTrackTime = endStr;
+            return {
+                start: timeStringToDate(startStr, dayOffset),
+                end: timeStringToDate(endStr, dayOffset),
+                title: item.title,
+                startStr: startStr,
+                endStr: endStr,
+                sound: item.sound !== undefined ? item.sound : true
+            };
+        });
+
+        autoSelectCurrentIndex();
+        
+        const now = new Date();
+        if (currentIndex >= 0 && timetableParsed[currentIndex]) {
+            if (now < timetableParsed[currentIndex].start) {
+                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].start - now) / 1000));
+            } else {
+                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].end - now) / 1000));
+            }
+        } else {
+            timeLeft = 0;
+        }
+
+        updateDisplayOnly();
+        saveAutoBackup();
+    }
+
+    function toggleSoundItem(index) {
+        if (timetableRaw[index].sound === undefined) {
+            timetableRaw[index].sound = true;
+        }
+        timetableRaw[index].sound = !timetableRaw[index].sound;
+        
+        const wasRunning = (timerInterval !== null);
+        const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
+        refreshTimetableStructure(wasRunning, activeTitleBefore);
+    }
+
+    function autoSelectCurrentIndex() {
+        if (timetableParsed.length === 0) {
+            currentIndex = -1;
+            return;
+        }
+        const now = new Date();
+        currentIndex = -1; 
+        
+        for (let i = 0; i < timetableParsed.length; i++) {
+            if (now >= timetableParsed[i].start && now < timetableParsed[i].end) {
+                currentIndex = i;
+                break;
+            }
+        }
+        
+        if (currentIndex === -1 && timetableParsed.length > 0 && now < timetableParsed[0].start) {
+            currentIndex = -1;
+        }
+    }
+
+    function renderTimetableList() {
+        const tbody = document.getElementById('timetable-body');
+        tbody.innerHTML = '';
+
+        if (timetableParsed.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#555;">スケジュールが登録されていません</td></tr>`;
+            return;
+        }
+
+        timetableParsed.forEach((item, index) => {
+            const row = document.createElement('tr');
+            if (index === currentIndex) row.className = 'active-row';
+            
+            const isSoundOn = item.sound;
+            const soundBtnClass = isSoundOn ? 'btn-sound sound-on' : 'btn-sound sound-off';
+            const soundBtnIcon = isSoundOn ? '🔊' : '🔇';
+
+            let dateLabel = "";
+            if (dayOffset > 0) {
+                dateLabel = `<span style="color:#00ffff; font-size:0.75rem; margin-right:4px;">(翌日)</span>`;
+            }
+
+            row.innerHTML = `
+                <td>${index + 1}</td>
+                <td>${dateLabel}${item.startStr} 〜 ${item.endStr} <span style="color:#555; font-size:0.8rem;">(${timetableRaw[index].duration}分間)</span></td>
+                <td>${item.title}</td>
+                <td style="text-align: center; display: flex; gap: 5px; justify-content: center;">
+                    <button onclick="moveProgramItem(${index}, -1)" ${index === 0 ? "disabled" : ""}>↑</button>
+                    <button onclick="moveProgramItem(${index}, 1)" ${index === timetableParsed.length - 1 ? "disabled" : ""}>↓</button>
+                    <button class="${soundBtnClass}" onclick="toggleSoundItem(${index})" title="${isSoundOn ? '音をミュートする' : '音を鳴らす'}">${soundBtnIcon}</button>
+                    <button class="btn-edit" onclick="editProgramItem(${index})">編集</button>
+                    <button class="btn-edit" onclick="prepareInsertItem(${index})" title="このプログラムの後ろに挿入">＋</button>
+                    <button class="btn-delete" onclick="deleteProgramItem(${index})">削除</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    function checkAndSyncTime(now) {
+        if (timetableParsed.length === 0) return;
+
+        if (currentIndex === -1) {
+            const firstProgramStart = timetableParsed[0].start;
+            if (now >= firstProgramStart) {
+                currentIndex = 0;
+                renderTimetableList();
+            } else {
+                updateDisplayOnly();
+                return;
+            }
+        }
+
+        const current = timetableParsed[currentIndex];
+        if (now >= current.end) {
+            if (current.sound) {
+                playBeep();
+            }
+            autoSelectCurrentIndex();
+            if (currentIndex === -1) {
+                dayOffset += 1; 
+                let currentTrackTime = baseStartTimeStr;
+                timetableParsed = timetableParsed.map((item, idx) => {
+                    let startStr = currentTrackTime;
+                    let endStr = addMinutesToTimeStr(startStr, timetableRaw[idx].duration);
+                    currentTrackTime = endStr;
+                    return {
+                        ...item,
+                        start: timeStringToDate(startStr, dayOffset),
+                        end: timeStringToDate(endStr, dayOffset)
+                    };
+                });
+            }
+            renderTimetableList();
+        }
+
+        if (currentIndex >= 0) {
+            const targetEnd = timetableParsed[currentIndex].end;
+            const diffMs = targetEnd - now;
+            timeLeft = Math.max(0, Math.floor(diffMs / 1000));
+        }
+
+        updateDisplayOnly();
+    }
+
+    function updateDisplayOnly() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const date = now.getDate();
+        const week = ["日", "月", "火", "水", "木", "金", "土"];
+        const day = week[now.getDay()];
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+
+        const topInfoEl = document.getElementById('top-info');
+
+        const isWaiting = (currentIndex === -1 || (timetableParsed.length > 0 && now < timetableParsed[0].start));
+
+        if (isWaiting && timetableParsed.length > 0) {
+            const nextFirst = timetableParsed[0];
+            
+            topInfoEl.textContent = `${year}/${month}/${date}(${day})`;
+            
+            document.getElementById('current-title').textContent = '';
+            document.getElementById('time-left').innerHTML = getHMSClockHTML();
+            
+            document.getElementById('next-title').textContent = `開始予定：${nextFirst.startStr}〜`;
+            
+            document.getElementById('btn-start').disabled = (timerInterval !== null);
+            document.getElementById('btn-pause').disabled = (timerInterval === null);
+            renderTimetableList();
+            return;
+        }
+
+        if (timetableParsed.length === 0 || currentIndex < 0) {
+            topInfoEl.textContent = '';
+            document.getElementById('current-title').textContent = 'プログラムが登録されていません';
+            document.getElementById('time-left').textContent = '00:00';
+            document.getElementById('next-title').textContent = '次：--';
+            document.getElementById('btn-start').disabled = true;
+            return;
+        }
+
+        topInfoEl.textContent = `${year}/${month}/${date}(${day}) ${hours}:${minutes}`;
+        const current = timetableParsed[currentIndex];
+        
+        document.getElementById('current-title').textContent = current.title;
+        document.getElementById('time-left').textContent = formatTimeLeftString(timeLeft);
+        
+        const next = timetableParsed[currentIndex + 1];
+        document.getElementById('next-title').textContent = next ? `次：${next.title} (${next.startStr}〜)` : '次：なし（終了後に翌日ループ）';
+
+        document.getElementById('btn-start').disabled = (timerInterval !== null);
+        document.getElementById('btn-pause').disabled = (timerInterval === null);
+        renderTimetableList();
+    }
+
+    function startTimer() {
+        if (timetableParsed.length === 0) return;
+
+        if (isPaused && pauseStartTime) {
+            const pausedDurationMs = Date.now() - pauseStartTime;
+            
+            timetableParsed = timetableParsed.map(item => {
+                const newStart = new Date(item.start.getTime() + pausedDurationMs);
+                const newEnd = new Date(item.end.getTime() + pausedDurationMs);
+                
+                const startHours = newStart.getHours().toString().padStart(2, '0');
+                const startMins = newStart.getMinutes().toString().padStart(2, '0');
+                const endHours = newEnd.getHours().toString().padStart(2, '0');
+                const endMins = newEnd.getMinutes().toString().padStart(2, '0');
+
+                return {
+                    ...item,
+                    start: newStart,
+                    end: newEnd,
+                    startStr: `${startHours}:${startMins}`,
+                    endStr: `${endHours}:${endMins}`
+                };
+            });
+
+            baseStartTimeStr = timetableParsed[0].startStr;
+            pauseStartTime = null; 
+        }
+
+        autoSelectCurrentIndex();
+
+        if (!timerInterval) {
+            isPaused = false;
+            timerInterval = setInterval(() => {
+                if (isPaused) return;
+                updateClock(); 
+            }, 1000);
+        }
+        
+        document.getElementById('btn-start').disabled = true;
+        document.getElementById('btn-pause').disabled = false;
+        renderTimetableList();
+    }
+
+    function pauseTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            isPaused = true;
+            pauseStartTime = Date.now(); 
+            document.getElementById('btn-start').disabled = false;
+            document.getElementById('btn-pause').disabled = true;
+        }
+    }
+
+    function resetTimer() {
+        isPaused = false;
+        pauseStartTime = null;
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        
+        dayOffset = 0;
+        
+        let currentTrackTime = baseStartTimeStr;
+        timetableParsed = timetableParsed.map((item, idx) => {
+            let startStr = currentTrackTime;
+            let endStr = addMinutesToTimeStr(startStr, timetableRaw[idx].duration);
+            currentTrackTime = endStr;
+            return {
+                ...item,
+                start: timeStringToDate(startStr, dayOffset),
+                end: timeStringToDate(endStr, dayOffset)
+            };
+        });
+
+        autoSelectCurrentIndex();
+        const now = new Date();
+        if (currentIndex >= 0 && timetableParsed[currentIndex]) {
+            if (now < timetableParsed[currentIndex].start) {
+                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].start - now) / 1000));
+            } else {
+                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].end - now) / 1000));
+            }
+        } else {
+            timeLeft = 0;
+        }
+        updateDisplayOnly();
+    }
+
+    /* ーーー データ保存・呼び出し機能 ーーー */
+
+    function saveTimetableToStorage() {
+        const nameInput = document.getElementById('save-name');
+        const name = nameInput.value.trim();
+        if (!name) {
+            alert('保存名（テンプレート名）を入力してください。');
+            return;
+        }
+
+        let savedData = JSON.parse(localStorage.getItem('saved_timetables') || '{}');
+        savedData[name] = {
+            baseStartTimeStr: baseStartTimeStr,
+            timetableRaw: timetableRaw
+        };
+
+        localStorage.setItem('saved_timetables', JSON.stringify(savedData));
+        nameInput.value = '';
+        updateLoadSelectOptions();
+        alert(`「${name}」として保存しました！`);
+    }
+
+    function loadTimetableFromStorage() {
+        const select = document.getElementById('load-select');
+        const name = select.value;
+        if (!name) {
+            alert('読み込むスケジュールを選択してください。');
+            return;
+        }
+
+        if(timerInterval && !confirm('現在タイマーが動作中、またはプログラムが読み込まれています。上書きしてよろしいですか？')) {
+            return;
+        }
+
+        let savedData = JSON.parse(localStorage.getItem('saved_timetables') || '{}');
+        if (savedData[name]) {
+            pauseTimer();
+            baseStartTimeStr = savedData[name].baseStartTimeStr || "08:00";
+            timetableRaw = savedData[name].timetableRaw || [];
+            
+            dayOffset = 0;
+            refreshTimetableStructure();
+            alert(`「${name}」を読み込みました。`);
+        }
+    }
+
+    function deleteTimetableFromStorage() {
+        const select = document.getElementById('load-select');
+        const name = select.value;
+        if (!name) {
+            alert('削除するスケジュールを選択してください。');
+            return;
+        }
+
+        if (confirm(`本当に「${name}」の保存データを削除しますか？`)) {
+            let savedData = JSON.parse(localStorage.getItem('saved_timetables') || '{}');
+            delete savedData[name];
+            localStorage.setItem('saved_timetables', JSON.stringify(savedData));
+            updateLoadSelectOptions();
+            select.value = "";
+        }
+    }
+
+    function updateLoadSelectOptions() {
+        const select = document.getElementById('load-select');
+        select.innerHTML = '<option value="">-- 選択してください --</option>';
+        
+        let savedData = JSON.parse(localStorage.getItem('saved_timetables') || '{}');
+        Object.keys(savedData).forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            select.appendChild(opt);
+        });
+    }
+
+    function saveAutoBackup() {
+        const backup = {
+            baseStartTimeStr: baseStartTimeStr,
+            timetableRaw: timetableRaw
+        };
+        localStorage.setItem('timetable_autobackup', JSON.stringify(backup));
+    }
+
+    function initLoad() {
+        updateLoadSelectOptions();
+
+        // バックアップのチェック
+        const checkBackup = localStorage.getItem('timetable_autobackup');
+        if (checkBackup) {
+            try {
+                const parsedBackup = JSON.parse(checkBackup);
+                if (parsedBackup.timetableRaw && parsedBackup.timetableRaw.length > 0) {
+                    baseStartTimeStr = parsedBackup.baseStartTimeStr || "08:00";
+                    timetableRaw = parsedBackup.timetableRaw;
+                } else {
+                    // 空ならサンプルデータ
+                    baseStartTimeStr = defaultSampleData.baseStartTimeStr;
+                    timetableRaw = JSON.parse(JSON.stringify(defaultSampleData.timetableRaw));
+                }
+            } catch(e) {
+                baseStartTimeStr = defaultSampleData.baseStartTimeStr;
+                timetableRaw = JSON.parse(JSON.stringify(defaultSampleData.timetableRaw));
+            }
+        } else {
+            // なければ初期データ
+            baseStartTimeStr = defaultSampleData.baseStartTimeStr;
+            timetableRaw = JSON.parse(JSON.stringify(defaultSampleData.timetableRaw));
+        }
+
+        let checkTrack = baseStartTimeStr;
+        let totalDuration = 0;
+        timetableRaw.forEach(item => totalDuration += item.duration);
+        let endTrackTimeStr = addMinutesToTimeStr(checkTrack, totalDuration);
+        
+        let todayEndTime = timeStringToDate(endTrackTimeStr, 0);
+        let now = new Date();
+        if (now >= todayEndTime) {
+            dayOffset = 1; 
+        } else {
+            dayOffset = 0;
+        }
+
+        refreshTimetableStructure(false, null, true);
+        
+        if (currentIndex === -1 && dayOffset > 0) {
+            timeLeft = Math.max(0, Math.floor((timetableParsed[0].start - now) / 1000));
+        } else if (currentIndex >= 0) {
+            if (now < timetableParsed[currentIndex].start) {
+                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].start - now) / 1000));
+            } else {
+                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].end - now) / 1000));
+            }
+        }
+
+        startTimer();
+    }
+
+    initLoad();
+</script>
+
+</body>
+</html>
