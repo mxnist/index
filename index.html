@@ -116,7 +116,7 @@
             margin: 5px 0;
         }
         .timer-display.ios-fullscreen .time-left {
-            font-size: 14rem; /* iPhoneの画面幅に合わせて少し調整 */
+            font-size: 32vh; /* iPadとiPhone縦向き両方に対応する縦幅基準 */
             line-height: 1;
             margin: 2vh 0;
             text-shadow: 0 0 35px rgba(0, 255, 0, 0.8);
@@ -136,7 +136,7 @@
             50% { opacity: 0.3; }
         }
 
-        /* 待機時時計の秒数（蛍光赤・小さめ）のスタイル */
+        /* 待機時時計の秒数 */
         .sec-red {
             font-size: 0.7em;
             color: #ff3333;
@@ -174,7 +174,7 @@
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s;
-            -webkit-appearance: none; /* iOSデフォルトスタイルのリセット */
+            -webkit-appearance: none; 
         }
         button:hover {
             background-color: var(--btn-hover);
@@ -257,8 +257,8 @@
             z-index: 10000;
         }
         .timer-display.ios-fullscreen .fullscreen-btn {
-            top: 30px;
-            right: 30px;
+            top: 20px;
+            right: 20px;
             font-size: 1.2rem;
             opacity: 0.4;
         }
@@ -310,7 +310,6 @@
             width: 90px;
         }
 
-        /* 行内のインライン入力用スタイル */
         input.inline-alert-input {
             width: 55px;
             padding: 4px;
@@ -355,16 +354,45 @@
             align-items: center;
         }
 
-        /* レスポンシブ調整（iPhone用） */
+        /* 📱 【追加】iPhone横向き（画面の縦幅が極端に狭いとき）専用のレスポンシブ微調整 */
+        @media (max-height: 440px) and (orientation: landscape) {
+            .timer-display.ios-fullscreen {
+                padding: 2vh 2vw !important;
+            }
+            .timer-display.ios-fullscreen .top-info {
+                font-size: 1.6rem !important;
+                margin-bottom: 1vh !important;
+            }
+            .timer-display.ios-fullscreen .current-title {
+                font-size: 2.0rem !important;
+                margin-bottom: 0 !important;
+            }
+            .timer-display.ios-fullscreen .time-left {
+                font-size: 44vh !important; /* 横向き時は縦いっぱいに数字を広げる */
+                margin: 0 !important;
+            }
+            .timer-display.ios-fullscreen .next-title {
+                font-size: 1.3rem !important;
+                margin-top: 1vh !important;
+            }
+            .timer-display.ios-fullscreen .fullscreen-btn {
+                top: 8px !important;
+                right: 8px !important;
+                font-size: 0.8rem !important;
+                padding: 4px 8px !important;
+            }
+            .timer-display.ios-fullscreen .controls {
+                margin-top: 5px !important;
+            }
+        }
+
+        /* スマホ縦向き時のテーブル崩れ防止 */
         @media (max-width: 600px) {
             .table-list {
                 font-size: 0.75rem;
             }
             .table-list th, .table-list td {
                 padding: 6px 4px;
-            }
-            .table-list td style {
-                flex-wrap: wrap;
             }
         }
     </style>
@@ -495,7 +523,6 @@
         ]
     };
 
-    // AudioContextの初期生成を保留、またはユーザーのアクションで初期化
     let audioCtx = null;
     function initAudio() {
         if (!audioCtx) {
@@ -534,7 +561,6 @@
     setInterval(updateClock, 1000);
     updateClock(); 
 
-    // 【iOS対応】ネイティブFullscreenが使えない場合はCSSクラスをトグル
     function toggleFullscreen() {
         const timerArea = document.getElementById('timer-area');
         const btn = document.querySelector('.fullscreen-btn');
@@ -545,7 +571,7 @@
         } else {
             timerArea.classList.add('ios-fullscreen');
             btn.textContent = "✕ 閉じる";
-            initAudio(); // 画面タップタイミングでオーディオも有効化
+            initAudio(); 
         }
     }
 
@@ -1016,7 +1042,7 @@
 
     function startTimer() {
         if (timetableParsed.length === 0) return;
-        initAudio(); // ボタンがタップされたのでオーディオを有効化
+        initAudio(); 
 
         if (isPaused && pauseStartTime) {
             const pausedDurationMs = Date.now() - pauseStartTime;
@@ -1104,8 +1130,6 @@
         }
         updateDisplayOnly();
     }
-
-    /* ーーー データ保存・呼び出し機能 ーーー */
 
     function saveTimetableToStorage() {
         const nameInput = document.getElementById('save-name');
@@ -1246,7 +1270,6 @@
             }
         }
 
-        // iOSではロード直後の自動スタートを保留させ、手動スタート待ちに
         updateDisplayOnly();
     }
 
