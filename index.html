@@ -121,13 +121,13 @@
             margin: 5px 0;
         }
         .timer-display.ios-fullscreen .time-left {
-            font-size: 32vh; /* iPadとiPhone縦向き両方に対応する縦幅基準 */
+            font-size: 32vh;
             line-height: 1;
             margin: 2vh 0;
             text-shadow: 0 0 35px rgba(0, 255, 0, 0.8);
         }
 
-        /* アラート状態のスタイル（赤文字＋点滅） */
+        /* アラート状態のスタイル */
         .time-left.alert-mode {
             color: var(--alert-color) !important;
             text-shadow: 0 0 12px rgba(255, 51, 51, 0.6) !important;
@@ -141,7 +141,6 @@
             50% { opacity: 0.3; }
         }
 
-        /* 待機時時計の秒数 */
         .sec-red {
             font-size: 0.7em;
             color: #ff3333;
@@ -151,7 +150,6 @@
             text-shadow: 0 0 35px rgba(255, 51, 51, 0.8);
         }
 
-        /* 次のプログラム */
         .next-title {
             font-size: 1.1rem;
             color: #666666;
@@ -162,7 +160,6 @@
             margin-top: 2vh;
         }
 
-        /* コントロールボタン */
         .controls {
             display: flex;
             justify-content: center;
@@ -193,70 +190,10 @@
             cursor: not-allowed;
         }
 
-        button.btn-delete {
-            padding: 4px 8px;
-            font-size: 0.8rem;
-            background-color: #2a1515;
-            color: #aa6666;
-            border-color: #442222;
-        }
-        button.btn-delete:hover {
-            background-color: #441111;
-            color: #ff9999;
-            border-color: #662222;
-        }
-
-        button.btn-edit {
-            padding: 4px 8px;
-            font-size: 0.8rem;
-            background-color: #15222a;
-            color: #668caa;
-            border-color: #223344;
-        }
-        button.btn-edit:hover {
-            background-color: #112e44;
-            color: #99ccff;
-            border-color: #224466;
-        }
-
-        button.btn-sound {
-            padding: 4px 8px;
-            font-size: 0.8rem;
-            min-width: 32px;
-        }
-        button.btn-sound.sound-on {
-            background-color: #152a1a;
-            color: #66aa77;
-            border-color: #22442b;
-        }
-        button.btn-sound.sound-on:hover {
-            background-color: #1a4422;
-            color: #aaffbb;
-        }
-        button.btn-sound.sound-off {
-            background-color: #222222;
-            color: #555555;
-            border-color: #333333;
-        }
-        button.btn-sound.sound-off:hover {
-            background-color: #333333;
-            color: #888888;
-        }
-
-        button#btn-submit {
-            background-color: #1a2a1a;
-            color: #88aa88;
-            border-color: #224422;
-        }
-        button#btn-submit:hover {
-            background-color: #224422;
-            color: #aaffaa;
-            border-color: #336633;
-        }
-
+        /* 全画面ボタンの配置修正 */
         .fullscreen-btn {
             position: absolute;
-            top: 15px;
+            top: 45px; /* ここを45pxにずらしました */
             right: 15px;
             font-size: 0.8rem;
             z-index: 10000;
@@ -272,133 +209,33 @@
         }
 
         /* タイムテーブル設定フォーム */
-        .form-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-        .form-row .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .form-row .form-group.flex-grow {
-            flex: 1;
-            min-width: 180px;
-        }
-        label {
-            font-size: 0.8rem;
-            color: #666666;
-        }
-        input[type="time"], input[type="text"], input[type="number"], select {
-            background-color: #161616;
-            border: 1px solid #333;
-            border-radius: 4px;
-            color: #999999;
-            padding: 8px;
-            font-size: 0.9rem;
-            font-family: monospace;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-        }
-        input[type="text"], select {
-            font-family: sans-serif;
-        }
-        input:focus, select:focus {
-            outline: none;
-            border-color: #555555;
-            color: #ffffff;
-        }
-        input[type="number"] {
-            width: 90px;
-        }
+        .form-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 5px; }
+        .form-row .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-row .form-group.flex-grow { flex: 1; min-width: 180px; }
+        label { font-size: 0.8rem; color: #666666; }
+        input[type="time"], input[type="text"], input[type="number"], select { background-color: #161616; border: 1px solid #333; border-radius: 4px; color: #999999; padding: 8px; font-size: 0.9rem; font-family: monospace; box-sizing: border-box; -webkit-appearance: none; }
+        input[type="text"], select { font-family: sans-serif; }
+        input:focus, select:focus { outline: none; border-color: #555555; color: #ffffff; }
+        input[type="number"] { width: 90px; }
+        .table-list { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.9rem; }
+        .table-list th, .table-list td { border: 1px solid #222; padding: 10px; text-align: left; }
+        .table-list th { background-color: #161616; color: #888888; }
+        .active-row { background-color: #1a252f !important; color: #ffffff; border-left: 4px solid var(--accent-color); }
+        .storage-zone { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #333; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
 
-        input.inline-alert-input {
-            width: 55px;
-            padding: 4px;
-            font-size: 0.8rem;
-            text-align: center;
-            margin: 0 2px;
-        }
-
-        /* 進行一覧 */
-        .table-list {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 0.9rem;
-        }
-
-        .table-list th, .table-list td {
-            border: 1px solid #222;
-            padding: 10px;
-            text-align: left;
-        }
-
-        .table-list th {
-            background-color: #161616;
-            color: #888888;
-        }
-
-        .active-row {
-            background-color: #1a252f !important;
-            color: #ffffff;
-            border-left: 4px solid var(--accent-color);
-        }
-
-        /* 保存管理エリア */
-        .storage-zone {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px dashed #333;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: center;
-        }
-
-        /* 📱 【追加】iPhone横向き（画面の縦幅が極端に狭いとき）専用のレスポンシブ微調整 */
         @media (max-height: 440px) and (orientation: landscape) {
-            .timer-display.ios-fullscreen {
-                padding: 2vh 2vw !important;
-            }
-            .timer-display.ios-fullscreen .top-info {
-                font-size: 1.6rem !important;
-                margin-bottom: 1vh !important;
-            }
-            .timer-display.ios-fullscreen .current-title {
-                font-size: 2.0rem !important;
-                margin-bottom: 0 !important;
-            }
-            .timer-display.ios-fullscreen .time-left {
-                font-size: 44vh !important; /* 横向き時は縦いっぱいに数字を広げる */
-                margin: 0 !important;
-            }
-            .timer-display.ios-fullscreen .next-title {
-                font-size: 1.3rem !important;
-                margin-top: 1vh !important;
-            }
-            .timer-display.ios-fullscreen .fullscreen-btn {
-                top: 8px !important;
-                right: 8px !important;
-                font-size: 0.8rem !important;
-                padding: 4px 8px !important;
-            }
-            .timer-display.ios-fullscreen .controls {
-                margin-top: 5px !important;
-            }
+            .timer-display.ios-fullscreen { padding: 2vh 2vw !important; }
+            .timer-display.ios-fullscreen .top-info { font-size: 1.6rem !important; margin-bottom: 1vh !important; }
+            .timer-display.ios-fullscreen .current-title { font-size: 2.0rem !important; margin-bottom: 0 !important; }
+            .timer-display.ios-fullscreen .time-left { font-size: 44vh !important; margin: 0 !important; }
+            .timer-display.ios-fullscreen .next-title { font-size: 1.3rem !important; margin-top: 1vh !important; }
+            .timer-display.ios-fullscreen .fullscreen-btn { top: 8px !important; right: 8px !important; font-size: 0.8rem !important; padding: 4px 8px !important; }
+            .timer-display.ios-fullscreen .controls { margin-top: 5px !important; }
         }
 
-        /* スマホ縦向き時のテーブル崩れ防止 */
         @media (max-width: 600px) {
-            .table-list {
-                font-size: 0.75rem;
-            }
-            .table-list th, .table-list td {
-                padding: 6px 4px;
-            }
+            .table-list { font-size: 0.75rem; }
+            .table-list th, .table-list td { padding: 6px 4px; }
         }
     </style>
 </head>
