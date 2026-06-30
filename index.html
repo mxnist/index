@@ -9,9 +9,6 @@
     
     <link rel="apple-touch-icon" href="https://drive.google.com/uc?export=view&id=1GX6rNN9sU3XtTOcfncRZedDXnRqQsyDC">
 
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <style>
         :root {
             --bg-color: #000000;
@@ -569,32 +566,17 @@
     setInterval(updateClock, 1000);
     updateClock(); 
 
-    // 📱 全画面化の切り替えと自動横向き処理
     function toggleFullscreen() {
         const timerArea = document.getElementById('timer-area');
         const btn = document.querySelector('.fullscreen-btn');
         
         if (timerArea.classList.contains('ios-fullscreen')) {
-            // 全画面解除時
             timerArea.classList.remove('ios-fullscreen');
             btn.textContent = "🗖 全画面化";
-            
-            // 画面ロックの解除（元の向きに戻せるようにする）
-            if (screen.orientation && screen.orientation.unlock) {
-                screen.orientation.unlock().catch(() => {});
-            }
         } else {
-            // 全画面化時
             timerArea.classList.add('ios-fullscreen');
             btn.textContent = "✕ 閉じる";
             initAudio(); 
-            
-            // 🔄 【追加】自動的に横向き（ランドスケープ）にする
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch((err) => {
-                    console.log("画面固定はPWA（ホーム画面から起動）でのみ有効です:", err);
-                });
-            }
         }
     }
 
@@ -1199,10 +1181,7 @@
 
             dayOffset = 0;
             refreshTimetableStructure();
-            
-            // 🔄 テンプレート読み込み時にも自動スタートを走らせる
-            startTimer();
-            alert(`「${name}」を読み込み、タイマーを自動開始しました。`);
+            alert(`「${name}」を読み込みました。`);
         }
     }
 
@@ -1298,7 +1277,7 @@
 
         updateDisplayOnly();
 
-        // 🚀 【追加】アプリが立ち上がった瞬間に自動でスタートさせる
+        // 🚀 ページ読み込み時に自動でタイマーを開始
         startTimer();
     }
 
