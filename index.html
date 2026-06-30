@@ -36,7 +36,6 @@
             align-items: center;
         }
 
-        /* 【追加】全画面表示のときはページ全体のスクロールバーを隠す */
         body:has(.ios-fullscreen) {
             overflow: hidden !important;
         }
@@ -87,7 +86,7 @@
             margin: 0 !important;
             border: none !important;
             border-radius: 0 !important;
-            overflow: hidden !important; /* 【修正】内部のはみ出しによるスクロールバーを防止 */
+            overflow: hidden;
         }
 
         /* 日付・時刻共通スタイル */
@@ -171,6 +170,7 @@
             justify-content: center;
             gap: 10px;
             margin-top: 20px;
+            min-height: 38px;
         }
 
         button {
@@ -229,6 +229,11 @@
         .active-row { background-color: #1a252f !important; color: #ffffff; border-left: 4px solid var(--accent-color); }
         .storage-zone { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #333; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
 
+        /* 行内編集用のスタイル調整 */
+        .inline-edit-input { width: 100%; box-sizing: border-box; }
+        .inline-edit-num { width: 70px !important; }
+        .insert-row { background-color: #1e1e1e !important; border-left: 4px solid #00ffff; }
+
         @media (max-height: 440px) and (orientation: landscape) {
             .timer-display.ios-fullscreen { padding: 2vh 2vw !important; }
             .timer-display.ios-fullscreen .top-info { font-size: 1.6rem !important; margin-bottom: 1vh !important; }
@@ -261,14 +266,14 @@
         
         <div id="next-title" class="next-title">次：--</div>
 
-        <div class="controls">
+        <div class="controls" id="timer-controls-zone">
             <button id="btn-start" onclick="startTimer()">手動スタート</button>
             <button id="btn-pause" onclick="pauseTimer()" disabled>一時停止</button>
         </div>
     </div>
 
     <div class="card">
-        <h3 id="form-heading" style="color:#888; font-size:1rem; margin-top:0;">📋 プログラム追加</h3>
+        <h3 style="color:#888; font-size:1rem; margin-top:0;">📋 新しいプログラムを追加 (末尾)</h3>
         <div class="form-row">
             <div class="form-group">
                 <label id="label-start" for="input-start">開始時刻</label>
@@ -292,7 +297,6 @@
                 <input type="text" id="input-title" placeholder="例: パネルディスタッション">
             </div>
             <button id="btn-submit" onclick="submitFormItem()" style="margin-top: 20px;">追加する</button>
-            <button id="btn-cancel-edit" onclick="cancelEditMode()" style="margin-top: 20px; display: none;">キャンセル</button>
         </div>
     </div>
 
@@ -302,9 +306,9 @@
             <thead>
                 <tr>
                     <th style="width: 40px;">順番</th>
-                    <th style="width: 120px;">時間帯</th>
+                    <th style="width: 150px;">時間帯/所要時間</th>
                     <th>プログラム名</th>
-                    <th style="width: 200px; text-align: center;">操作</th>
+                    <th style="width: 220px; text-align: center;">操作</th>
                 </tr>
             </thead>
             <tbody id="timetable-body">
@@ -425,19 +429,29 @@
 
     function refreshTimetableStructure(keepTimerAlive = false, previousActiveTitle = null, skipBackup = false) {
         if (!baseStartTimeStr) baseStartTimeStr = "08:00";
-        let currentTrackTime = baseStartTimeStr;
+        
+        let now = new Date();
+        let currentTrackDate = timeStringToDate(baseStartTimeStr, 0); 
+        
+        let totalMinutes = 0;
+        timetableRaw.forEach(item => totalMinutes += item.duration);
+        let scheduleEndDate = new Date(currentTrackDate.getTime() + totalMinutes * 60 * 1000);
+
+        dayOffset = (now >= scheduleEndDate) ? 1 : 0;
+
+        currentTrackDate = timeStringToDate(baseStartTimeStr, dayOffset);
 
         timetableParsed = timetableRaw.map(item => {
-            let startStr = currentTrackTime;
-            let endStr = addMinutesToTimeStr(startStr, item.duration);
-            currentTrackTime = endStr; 
+            let start = new Date(currentTrackDate.getTime());
+            let end = new Date(start.getTime() + item.duration * 60 * 1000);
+            currentTrackDate = end; 
 
             return {
-                start: timeStringToDate(startStr, dayOffset),
-                end: timeStringToDate(endStr, dayOffset),
+                start: start,
+                end: end,
                 title: item.title,
-                startStr: startStr,
-                endStr: endStr,
+                startStr: dateToTimeString(start),
+                endStr: dateToTimeString(end),
                 sound: item.sound !== undefined ? item.sound : true,
                 alertMin: item.alertMin !== undefined ? item.alertMin : 0
             };
@@ -445,18 +459,21 @@
 
         setupNextFormPlaceholder();
 
-        if (keepTimerAlive && previousActiveTitle !== null) {
+        if ((keepTimerAlive === true || keepTimerAlive === "force") && previousActiveTitle !== null) {
             const newIdx = timetableParsed.findIndex(item => item.title === previousActiveTitle);
             if (newIdx !== -1) {
                 currentIndex = newIdx; 
                 updateDisplayOnly();
+                renderTimetableList();
                 return; 
             }
         }
 
         autoSelectCurrentIndex();
         
-        if (!keepTimerAlive) {
+        if (keepTimerAlive === "force") {
+            updateDisplayOnly();
+        } else if (!keepTimerAlive) {
             resetTimer();
         } else {
             updateDisplayOnly();
@@ -465,6 +482,8 @@
         if (!skipBackup) {
             saveAutoBackup();
         }
+        
+        renderTimetableList();
     }
 
     function addMinutesToTimeStr(timeStr, minsToAdd) {
@@ -477,6 +496,12 @@
         minutes = minutes % 60;
         hours = hours % 24;
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    }
+
+    function dateToTimeString(dateObj) {
+        const h = dateObj.getHours().toString().padStart(2, '0');
+        const m = dateObj.getMinutes().toString().padStart(2, '0');
+        return `${h}:${m}`;
     }
 
     function formatTimeLeftString(totalSeconds) {
@@ -511,28 +536,23 @@
     }
 
     function onStartTimeInput() {
-        if (timetableRaw.length === 0 || editTargetIndex === 0) {
+        if (timetableRaw.length === 0) {
             baseStartTimeStr = document.getElementById('input-start').value || "08:00";
         }
         calculateEndTime();
     }
 
     function setupNextFormPlaceholder() {
-        if (editTargetIndex !== -1 || insertTargetIndex !== -1) return; 
-
         if (timetableRaw.length === 0) {
             if (!baseStartTimeStr) baseStartTimeStr = "08:00";
             document.getElementById('input-start').value = baseStartTimeStr;
             document.getElementById('input-start').disabled = false;
-            document.getElementById('label-start').textContent = "開始時刻";
         } else {
-            let currentTrackTime = baseStartTimeStr;
-            timetableRaw.forEach(item => {
-                currentTrackTime = addMinutesToTimeStr(currentTrackTime, item.duration);
-            });
-            document.getElementById('input-start').value = currentTrackTime;
+            if(timetableParsed.length > 0) {
+                const lastItem = timetableParsed[timetableParsed.length - 1];
+                document.getElementById('input-start').value = lastItem.endStr;
+            }
             document.getElementById('input-start').disabled = true;
-            document.getElementById('label-start').textContent = "開始時刻 (自動連動)";
         }
         calculateEndTime();
     }
@@ -558,81 +578,73 @@
         const wasRunning = (timerInterval !== null);
         const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
 
-        if (editTargetIndex === -1) {
-            if (timetableRaw.length === 0) {
-                baseStartTimeStr = document.getElementById('input-start').value || "08:00";
-            }
-            if (insertTargetIndex !== -1) {
-                timetableRaw.splice(insertTargetIndex + 1, 0, { duration, title, sound: false, alertMin });
-                cancelEditMode();
-            } else {
-                timetableRaw.push({ duration, title, sound: false, alertMin });
-            }
-        } else {
-            if (editTargetIndex === 0) {
-                baseStartTimeStr = document.getElementById('input-start').value;
-            }
-            const currentSound = timetableRaw[editTargetIndex].sound !== undefined ? timetableRaw[editTargetIndex].sound : true;
-            timetableRaw[editTargetIndex] = { duration, title, sound: currentSound, alertMin };
-            cancelEditMode();
+        if (timetableRaw.length === 0) {
+            baseStartTimeStr = document.getElementById('input-start').value || "08:00";
         }
+        timetableRaw.push({ duration, title, sound: false, alertMin });
         
         clearForm();
-        dayOffset = 0; 
-        refreshTimetableStructure(wasRunning, activeTitleBefore);
+        refreshTimetableStructure(wasRunning ? true : "force", activeTitleBefore);
     }
 
     function editProgramItem(index) {
-        cancelEditMode(); 
+        insertTargetIndex = -1; 
         editTargetIndex = index;
-        const item = timetableRaw[index];
+        renderTimetableList();
+    }
 
-        let currentTrackTime = baseStartTimeStr;
-        for (let i = 0; i < index; i++) {
-            currentTrackTime = addMinutesToTimeStr(currentTrackTime, timetableRaw[i].duration);
+    function saveInlineEdit(index) {
+        const row = document.getElementById(`row-${index}`);
+        const newTitle = row.querySelector('.inline-title-input').value.trim();
+        const newDuration = parseInt(row.querySelector('.inline-duration-input').value, 10);
+        
+        let newStartStr = null;
+        if (index === 0) {
+            newStartStr = row.querySelector('.inline-start-input').value;
         }
 
-        document.getElementById('input-start').value = currentTrackTime;
-        document.getElementById('input-start').disabled = (index !== 0);
-        document.getElementById('label-start').textContent = index === 0 ? "開始時刻 (全体連動)" : "開始時刻 (固定)";
-        
-        document.getElementById('input-duration').value = item.duration;
-        document.getElementById('input-title').value = item.title;
-        document.getElementById('input-alert-min').value = item.alertMin !== undefined ? item.alertMin : 0;
-        
-        calculateEndTime();
+        if (!newTitle || isNaN(newDuration) || newDuration <= 0) {
+            alert('有効なプログラム名と所要時間を入力してください。');
+            return;
+        }
 
-        document.getElementById('form-heading').textContent = `📝 プログラム [No.${index + 1}] を編集中`;
-        document.getElementById('btn-submit').textContent = "更新する";
-        document.getElementById('btn-cancel-edit').style.display = "inline-block";
+        if (index === 0 && newStartStr) {
+            baseStartTimeStr = newStartStr;
+        }
+
+        timetableRaw[index].title = newTitle;
+        timetableRaw[index].duration = newDuration;
+
+        const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
+        
+        editTargetIndex = -1;
+        refreshTimetableStructure("force", activeTitleBefore);
     }
 
     function prepareInsertItem(index) {
-        cancelEditMode();
+        editTargetIndex = -1; 
         insertTargetIndex = index;
-
-        let currentTrackTime = baseStartTimeStr;
-        for (let i = 0; i <= index; i++) {
-            currentTrackTime = addMinutesToTimeStr(currentTrackTime, timetableRaw[i].duration);
-        }
-
-        document.getElementById('input-start').value = currentTrackTime;
-        document.getElementById('input-start').disabled = true;
-        document.getElementById('label-start').textContent = `開始時刻 (No.${index + 1}の後ろに挿入)`;
-
-        document.getElementById('form-heading').textContent = `➕ プログラム [No.${index + 1}] の後ろに挿入中`;
-        document.getElementById('btn-submit').textContent = "挿入する";
-        document.getElementById('btn-cancel-edit').style.display = "inline-block";
+        renderTimetableList();
     }
 
-    function cancelEditMode() {
-        editTargetIndex = -1;
-        insertTargetIndex = -1; 
-        clearForm();
-        document.getElementById('form-heading').textContent = "📋 プログラム追加";
-        document.getElementById('btn-submit').textContent = "追加する";
-        document.getElementById('btn-cancel-edit').style.display = "none";
-        setupNextFormPlaceholder();
+    function saveInlineInsert(index) {
+        const row = document.getElementById(`insert-row-${index}`);
+        const title = row.querySelector('.inline-insert-title').value.trim();
+        const duration = parseInt(row.querySelector('.inline-insert-duration').value, 10);
+        let alertMin = parseInt(row.querySelector('.inline-insert-alert').value, 10);
+        if (isNaN(alertMin) || alertMin < 0) alertMin = 0;
+
+        if (!title || isNaN(duration) || duration <= 0) {
+            alert('プログラム名と所要時間を正しく入力してください。');
+            return;
+        }
+
+        const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
+
+        timetableRaw.splice(index + 1, 0, { duration, title, sound: false, alertMin });
+        
+        insertTargetIndex = -1;
+        refreshTimetableStructure("force", activeTitleBefore);
     }
 
     function changeInlineAlertMin(index, val) {
@@ -642,8 +654,9 @@
         timetableRaw[index].alertMin = minutes;
         
         const wasRunning = (timerInterval !== null);
-        const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
-        refreshTimetableStructure(wasRunning, activeTitleBefore);
+        if (!wasRunning) {
+            saveAutoBackup();
+        }
     }
 
     function clearForm() {
@@ -654,13 +667,13 @@
     }
 
     function deleteProgramItem(index) {
-        if (editTargetIndex === index || insertTargetIndex === index) cancelEditMode(); 
+        if (editTargetIndex === index) editTargetIndex = -1;
+        if (insertTargetIndex === index) insertTargetIndex = -1;
         const wasRunning = (timerInterval !== null);
         const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
         
         timetableRaw.splice(index, 1);
-        dayOffset = 0;
-        refreshTimetableStructure(wasRunning, activeTitleBefore);
+        refreshTimetableStructure(wasRunning ? true : "force", activeTitleBefore);
     }
 
     function moveProgramItem(index, direction) {
@@ -671,37 +684,7 @@
         timetableRaw[index] = timetableRaw[newIndex];
         timetableRaw[newIndex] = temp;
 
-        let currentTrackTime = baseStartTimeStr;
-        timetableParsed = timetableRaw.map(item => {
-            const startStr = currentTrackTime;
-            const endStr = addMinutesToTimeStr(startStr, item.duration);
-            currentTrackTime = endStr;
-            return {
-                start: timeStringToDate(startStr, dayOffset),
-                end: timeStringToDate(endStr, dayOffset),
-                title: item.title,
-                startStr: startStr,
-                endStr: endStr,
-                sound: item.sound !== undefined ? item.sound : true,
-                alertMin: item.alertMin !== undefined ? item.alertMin : 0
-            };
-        });
-
-        autoSelectCurrentIndex();
-        
-        const now = new Date();
-        if (currentIndex >= 0 && timetableParsed[currentIndex]) {
-            if (now < timetableParsed[currentIndex].start) {
-                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].start - now) / 1000));
-            } else {
-                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].end - now) / 1000));
-            }
-        } else {
-            timeLeft = 0;
-        }
-
-        updateDisplayOnly();
-        saveAutoBackup();
+        refreshTimetableStructure("force", null);
     }
 
     function toggleSoundItem(index) {
@@ -709,10 +692,16 @@
             timetableRaw[index].sound = true;
         }
         timetableRaw[index].sound = !timetableRaw[index].sound;
+        timetableParsed[index].sound = timetableRaw[index].sound;
         
-        const wasRunning = (timerInterval !== null);
-        const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
-        refreshTimetableStructure(wasRunning, activeTitleBefore);
+        const btn = document.querySelector(`#row-${index} .btn-sound`);
+        if (btn) {
+            const isSoundOn = timetableRaw[index].sound;
+            btn.className = isSoundOn ? 'btn-sound sound-on' : 'btn-sound sound-off';
+            btn.title = isSoundOn ? '音をミュートする' : '音を鳴らす';
+            btn.textContent = isSoundOn ? '🔊' : '🔇';
+        }
+        saveAutoBackup();
     }
 
     function autoSelectCurrentIndex() {
@@ -721,6 +710,7 @@
             return;
         }
         const now = new Date();
+        const oldIndex = currentIndex;
         currentIndex = -1; 
         
         for (let i = 0; i < timetableParsed.length; i++) {
@@ -732,6 +722,19 @@
         
         if (currentIndex === -1 && timetableParsed.length > 0 && now < timetableParsed[0].start) {
             currentIndex = -1;
+        }
+
+        if (oldIndex !== currentIndex && editTargetIndex === -1 && insertTargetIndex === -1) {
+            for (let i = 0; i < timetableParsed.length; i++) {
+                const row = document.getElementById(`row-${i}`);
+                if (row) {
+                    if (i === currentIndex) {
+                        row.classList.add('active-row');
+                    } else {
+                        row.classList.remove('active-row');
+                    }
+                }
+            }
         }
     }
 
@@ -746,39 +749,108 @@
 
         timetableParsed.forEach((item, index) => {
             const row = document.createElement('tr');
+            row.id = `row-${index}`;
             if (index === currentIndex) row.className = 'active-row';
             
             const isSoundOn = item.sound;
             const soundBtnClass = isSoundOn ? 'btn-sound sound-on' : 'btn-sound sound-off';
             const soundBtnIcon = isSoundOn ? '🔊' : '🔇';
 
-            let dateLabel = "";
-            if (dayOffset > 0) {
-                dateLabel = `<span style="color:#00ffff; font-size:0.75rem; margin-right:4px;">(翌日)</span>`;
+            let itemDateLabel = "";
+            let today = new Date();
+            if (item.start.getDate() !== today.getDate()) {
+                itemDateLabel = `<span style="color:#00ffff; font-size:0.75rem; margin-right:4px;">(翌日)</span>`;
             }
 
             const alertVal = item.alertMin !== undefined ? item.alertMin : 0;
 
-            row.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${dateLabel}${item.startStr} 〜 ${item.endStr} <span style="color:#555; font-size:0.8rem;">(${timetableRaw[index].duration}分)</span></td>
-                <td>${item.title}</td>
-                <td style="text-align: center; display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: wrap;">
-                    <button onclick="moveProgramItem(${index}, -1)" ${index === 0 ? "disabled" : ""}>↑</button>
-                    <button onclick="moveProgramItem(${index}, 1)" ${index === timetableParsed.length - 1 ? "disabled" : ""}>↓</button>
-                    <button class="${soundBtnClass}" onclick="toggleSoundItem(${index})" title="${isSoundOn ? '音をミュートする' : '音を鳴らす'}">${soundBtnIcon}</button>
-                    
-                    <div style="display: flex; align-items: center; background:#161616; border:1px solid #333; padding:2px 4px; border-radius:4px; font-size:0.8rem; color:#888;">
-                        ⚠️<input type="number" class="inline-alert-input" min="0" value="${alertVal}" onchange="changeInlineAlertMin(${index}, this.value)">分前
-                    </div>
+            if (index === editTargetIndex) {
+                const startInputHTML = index === 0 
+                    ? `<input type="time" class="inline-edit-input inline-start-input" value="${baseStartTimeStr}">`
+                    : `<span style="font-size:0.8rem;color:#666;">自動連動</span>`;
 
-                    <button class="btn-edit" onclick="editProgramItem(${index})">編集</button>
-                    <button class="btn-edit" onclick="prepareInsertItem(${index})" title="このプログラムの後ろに挿入">＋</button>
-                    <button class="btn-delete" onclick="deleteProgramItem(${index})">削除</button>
-                </td>
-            `;
-            tbody.appendChild(row);
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>
+                        ${startInputHTML}
+                        <div style="margin-top:5px; display:flex; align-items:center; gap:3px;">
+                            <input type="number" class="inline-edit-input inline-edit-num inline-duration-input" min="1" value="${timetableRaw[index].duration}">分
+                        </div>
+                    </td>
+                    <td>
+                        <input type="text" class="inline-edit-input inline-title-input" value="${item.title}">
+                    </td>
+                    <td style="text-align: center; display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                        <button onclick="saveInlineEdit(${index})" style="background:#004d00; color:#fff; width: 80px;">保存</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            } else {
+                // 【修正箇所】<br> タグを挿入して、(XX分) の表記が必ず次の行から始まるように強制指定
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td class="time-range-cell">${itemDateLabel}${item.startStr} 〜 ${item.endStr}<br><span style="color:#555; font-size:0.8rem;">(${timetableRaw[index].duration}分)</span></td>
+                    <td>${item.title}</td>
+                    <td style="text-align: center; display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                        <button onclick="moveProgramItem(${index}, -1)" ${index === 0 ? "disabled" : ""}>↑</button>
+                        <button onclick="moveProgramItem(${index}, 1)" ${index === timetableParsed.length - 1 ? "disabled" : ""}>↓</button>
+                        <button class="${soundBtnClass}" onclick="toggleSoundItem(${index})" title="${isSoundOn ? '音をミュートする' : '音を鳴らす'}">${soundBtnIcon}</button>
+                        
+                        <div style="display: flex; align-items: center; background:#161616; border:1px solid #333; padding:2px 4px; border-radius:4px; font-size:0.8rem; color:#888;">
+                            ⚠️<input type="number" class="inline-alert-input" min="0" value="${alertVal}" onchange="changeInlineAlertMin(${index}, this.value)">分前
+                        </div>
+
+                        <button class="btn-edit" onclick="editProgramItem(${index})">編集</button>
+                        <button class="btn-edit" onclick="prepareInsertItem(${index})" title="このプログラムの後ろに挿入">＋</button>
+                        <button class="btn-delete" onclick="deleteProgramItem(${index})">削除</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+
+            if (index === insertTargetIndex) {
+                const insertRow = document.createElement('tr');
+                insertRow.id = `insert-row-${index}`;
+                insertRow.className = 'insert-row';
+                insertRow.innerHTML = `
+                    <td>＋</td>
+                    <td>
+                        <span style="font-size:0.8rem;color:#888;">開始：自動連動</span>
+                        <div style="margin-top:5px; display:flex; align-items:center; gap:3px;">
+                            <input type="number" class="inline-edit-input inline-edit-num inline-insert-duration" min="1" placeholder="分" value="15">分
+                        </div>
+                    </td>
+                    <td>
+                        <input type="text" class="inline-edit-input inline-insert-title" placeholder="挿入するプログラム名を入力...">
+                        <div style="margin-top:5px; display:flex; align-items:center; gap:4px; font-size:0.8rem; color:#666;">
+                            ⚠️警告: <input type="number" class="inline-edit-input inline-edit-num inline-insert-alert" min="0" value="0"> 分前
+                        </div>
+                    </td>
+                    <td style="text-align: center; display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                        <button onclick="saveInlineInsert(${index})" style="background:#005580; color:#fff; width: 100px;">ここに挿入</button>
+                    </td>
+                `;
+                tbody.appendChild(insertRow);
+            }
         });
+    }
+
+    function updateTimetableCellsOnly() {
+        if (editTargetIndex !== -1 || insertTargetIndex !== -1) return; 
+        
+        let now = new Date();
+        timetableParsed.forEach((item, index) => {
+            const row = document.getElementById(`row-${index}`);
+            if (row) {
+                const cell = row.querySelector('.time-range-cell');
+                if (cell) {
+                    let itemDateLabel = (item.start.getDate() !== now.getDate()) ? `<span style="color:#00ffff; font-size:0.75rem; margin-right:4px;">(翌日)</span>` : "";
+                    // 【修正箇所】タイマーの毎秒同期更新時にも、必ず <br> で改行されるように統一
+                    cell.innerHTML = `${itemDateLabel}${item.startStr} 〜 ${item.endStr}<br><span style="color:#555; font-size:0.8rem;">(${timetableRaw[index].duration}分)</span>`;
+                }
+            }
+        });
+        setupNextFormPlaceholder(); 
     }
 
     function checkAndSyncTime(now) {
@@ -788,7 +860,7 @@
             const firstProgramStart = timetableParsed[0].start;
             if (now >= firstProgramStart) {
                 currentIndex = 0;
-                renderTimetableList();
+                updateTimetableCellsOnly();
             } else {
                 updateDisplayOnly();
                 return;
@@ -801,21 +873,15 @@
                 playBeep();
             }
             autoSelectCurrentIndex();
+            
             if (currentIndex === -1) {
-                dayOffset += 1; 
-                let currentTrackTime = baseStartTimeStr;
-                timetableParsed = timetableParsed.map((item, idx) => {
-                    let startStr = currentTrackTime;
-                    let endStr = addMinutesToTimeStr(startStr, timetableRaw[idx].duration);
-                    currentTrackTime = endStr;
-                    return {
-                        ...item,
-                        start: timeStringToDate(startStr, dayOffset),
-                        end: timeStringToDate(endStr, dayOffset)
-                    };
-                });
+                const totalEnd = timetableParsed[timetableParsed.length - 1].end;
+                if (now >= totalEnd) {
+                    refreshTimetableStructure(true, null);
+                    return;
+                }
             }
-            renderTimetableList();
+            updateTimetableCellsOnly();
         }
 
         if (currentIndex >= 0) {
@@ -839,6 +905,7 @@
 
         const topInfoEl = document.getElementById('top-info');
         const timeLeftEl = document.getElementById('time-left');
+        const controlsZone = document.getElementById('timer-controls-zone');
 
         timeLeftEl.classList.remove('alert-mode');
 
@@ -854,9 +921,7 @@
             
             document.getElementById('next-title').textContent = `開始予定：${nextFirst.startStr}〜`;
             
-            document.getElementById('btn-start').disabled = (timerInterval !== null);
-            document.getElementById('btn-pause').disabled = (timerInterval === null);
-            renderTimetableList();
+            controlsZone.style.display = 'none';
             return;
         }
 
@@ -865,9 +930,11 @@
             document.getElementById('current-title').textContent = 'プログラムが登録されていません';
             timeLeftEl.textContent = '00:00';
             document.getElementById('next-title').textContent = '次：--';
-            document.getElementById('btn-start').disabled = true;
+            controlsZone.style.display = 'none';
             return;
         }
+
+        controlsZone.style.display = 'flex';
 
         topInfoEl.textContent = `${year}/${month}/${date}(${day}) ${hours}:${minutes}`;
         const current = timetableParsed[currentIndex];
@@ -885,7 +952,6 @@
 
         document.getElementById('btn-start').disabled = (timerInterval !== null);
         document.getElementById('btn-pause').disabled = (timerInterval === null);
-        renderTimetableList();
     }
 
     function startTimer() {
@@ -898,18 +964,13 @@
             timetableParsed = timetableParsed.map(item => {
                 const newStart = new Date(item.start.getTime() + pausedDurationMs);
                 const newEnd = new Date(item.end.getTime() + pausedDurationMs);
-                
-                const startHours = newStart.getHours().toString().padStart(2, '0');
-                const startMins = newStart.getMinutes().toString().padStart(2, '0');
-                const endHours = newEnd.getHours().toString().padStart(2, '0');
-                const endMins = newEnd.getMinutes().toString().padStart(2, '0');
 
                 return {
                     ...item,
                     start: newStart,
                     end: newEnd,
-                    startStr: `${startHours}:${startMins}`,
-                    endStr: `${endHours}:${endMins}`
+                    startStr: dateToTimeString(newStart),
+                    endStr: dateToTimeString(newEnd)
                 };
             });
 
@@ -929,7 +990,7 @@
         
         document.getElementById('btn-start').disabled = true;
         document.getElementById('btn-pause').disabled = false;
-        renderTimetableList();
+        updateTimetableCellsOnly();
     }
 
     function pauseTimer() {
@@ -951,32 +1012,7 @@
             timerInterval = null;
         }
         
-        dayOffset = 0;
-        
-        let currentTrackTime = baseStartTimeStr;
-        timetableParsed = timetableParsed.map((item, idx) => {
-            let startStr = currentTrackTime;
-            let endStr = addMinutesToTimeStr(startStr, timetableRaw[idx].duration);
-            currentTrackTime = endStr;
-            return {
-                ...item,
-                start: timeStringToDate(startStr, dayOffset),
-                end: timeStringToDate(endStr, dayOffset)
-            };
-        });
-
-        autoSelectCurrentIndex();
-        const now = new Date();
-        if (currentIndex >= 0 && timetableParsed[currentIndex]) {
-            if (now < timetableParsed[currentIndex].start) {
-                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].start - now) / 1000));
-            } else {
-                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].end - now) / 1000));
-            }
-        } else {
-            timeLeft = 0;
-        }
-        updateDisplayOnly();
+        refreshTimetableStructure(true, null, true);
     }
 
     function saveTimetableToStorage() {
@@ -1022,7 +1058,6 @@
                 return item;
             });
 
-            dayOffset = 0;
             refreshTimetableStructure();
             alert(`「${name}」を読み込みました。`);
         }
@@ -1093,34 +1128,16 @@
             timetableRaw = JSON.parse(JSON.stringify(defaultSampleData.timetableRaw));
         }
 
-        let checkTrack = baseStartTimeStr;
-        let totalDuration = 0;
-        timetableRaw.forEach(item => totalDuration += item.duration);
-        let endTrackTimeStr = addMinutesToTimeStr(checkTrack, totalDuration);
-        
-        let todayEndTime = timeStringToDate(endTrackTimeStr, 0);
-        let now = new Date();
-        if (now >= todayEndTime) {
-            dayOffset = 1; 
-        } else {
-            dayOffset = 0;
-        }
-
         refreshTimetableStructure(false, null, true);
         
-        if (currentIndex === -1 && dayOffset > 0) {
+        const now = new Date();
+        if (currentIndex === -1 && timetableParsed.length > 0 && now < timetableParsed[0].start) {
             timeLeft = Math.max(0, Math.floor((timetableParsed[0].start - now) / 1000));
         } else if (currentIndex >= 0) {
-            if (now < timetableParsed[currentIndex].start) {
-                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].start - now) / 1000));
-            } else {
-                timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].end - now) / 1000));
-            }
+            timeLeft = Math.max(0, Math.floor((timetableParsed[currentIndex].end - now) / 1000));
         }
 
         updateDisplayOnly();
-
-        // ページ読み込み時に自動でタイマーを開始
         startTimer();
     }
 
