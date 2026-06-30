@@ -36,6 +36,11 @@
             align-items: center;
         }
 
+        /* 【追加】全画面表示のときはページ全体のスクロールバーを隠す */
+        body:has(.ios-fullscreen) {
+            overflow: hidden !important;
+        }
+
         .container {
             max-width: 850px;
             width: 100%;
@@ -82,6 +87,7 @@
             margin: 0 !important;
             border: none !important;
             border-radius: 0 !important;
+            overflow: hidden !important; /* 【修正】内部のはみ出しによるスクロールバーを防止 */
         }
 
         /* 日付・時刻共通スタイル */
@@ -193,7 +199,7 @@
         /* 全画面ボタンの配置修正 */
         .fullscreen-btn {
             position: absolute;
-            top: 75px; /* ここを75pxにずらしました */
+            top: 75px; 
             right: 15px;
             font-size: 0.8rem;
             z-index: 10000;
@@ -1114,7 +1120,7 @@
 
         updateDisplayOnly();
 
-        // 🚀 ページ読み込み時に自動でタイマーを開始
+        // ページ読み込み時に自動でタイマーを開始
         startTimer();
     }
 
