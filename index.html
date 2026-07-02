@@ -95,6 +95,21 @@
             overflow: hidden;
         }
 
+        /* スケジュール名表示用追加スタイル */
+        .schedule-name-display {
+            font-size: 0.9rem;
+            color: #888888;
+            margin-top: 15px; /* ボタンの下に移動したため、上の余白を確保 */
+            font-weight: bold;
+            order: 7; /* 日付やボタン（order: 6）の下に配置 */
+        }
+        .timer-display.ios-fullscreen .schedule-name-display {
+            font-size: 2.0rem;
+            color: #aaaaaa;
+            margin-top: 2.5vh;
+            margin-bottom: 0;
+        }
+
         /* 日付・時刻共通スタイル */
         .top-info {
             font-size: 1.2rem;
@@ -216,7 +231,7 @@
             right: 20px;
             font-size: 0.8rem;
             z-index: 10000;
-            order: 1;
+            order: 0; /* スケジュール名よりさらに独立したレイアウトにするため変更なし */
         }
         .timer-display.ios-fullscreen .fullscreen-btn {
             top: 20px !important;
@@ -257,6 +272,7 @@
             .timer-display.ios-fullscreen { 
                 padding: 2vh 6vw !important; /* 左右のセーフエリア余白を確保 */
             }
+            .timer-display.ios-fullscreen .schedule-name-display { font-size: 1.2rem !important; margin-top: 1vh !important; }
             .timer-display.ios-fullscreen .top-info { font-size: 1.6rem !important; margin-bottom: 1vh !important; }
             .timer-display.ios-fullscreen .current-title { font-size: 2.0rem !important; margin-bottom: 0 !important; }
             
@@ -286,6 +302,10 @@
                 position: static !important;
                 margin-bottom: 15px;
                 width: auto;
+            }
+            .timer-display:not(.ios-fullscreen) .schedule-name-display {
+                font-size: 0.85rem !important;
+                margin-top: 10px !important;
             }
             .timer-display:not(.ios-fullscreen) .top-info {
                 font-size: 1.1rem !important;
@@ -317,6 +337,12 @@
                 opacity: 0.5;
             }
             
+            /* 縦画面フルスクリーン時のスケジュール名 */
+            .timer-display.ios-fullscreen .schedule-name-display {
+                font-size: 1.4rem !important;
+                margin-top: 2vh !important;
+            }
+
             /* 【修正】縦画面フルスクリーン時の日付：悪目立ちしないよう1.2remから1.0remに小さく変更 */
             .timer-display.ios-fullscreen .top-info {
                 font-size: 1.0rem !important; 
@@ -371,6 +397,8 @@
             <button id="btn-start" onclick="startTimer()">手動スタート</button>
             <button id="btn-pause" onclick="pauseTimer()" disabled>一時停止</button>
         </div>
+
+        <div id="schedule-name" class="schedule-name-display">未選択</div>
     </div>
 
     <div class="card">
@@ -804,6 +832,9 @@
         }
         timetableRaw.push({ duration, title, sound: false, alertMin });
         
+        // 「スケジュール：」の固定文字を除去
+        document.getElementById('schedule-name').textContent = 'カスタム編集';
+        
         clearForm();
         refreshTimetableStructure(wasRunning ? true : "force", activeTitleBefore);
     }
@@ -838,6 +869,8 @@
 
         const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
         
+        // 「スケジュール：」の固定文字を除去
+        document.getElementById('schedule-name').textContent = 'カスタム編集';
         editTargetIndex = -1;
         refreshTimetableStructure("force", activeTitleBefore);
     }
@@ -864,6 +897,8 @@
 
         timetableRaw.splice(index + 1, 0, { duration, title, sound: false, alertMin });
         
+        // 「スケジュール：」の固定文字を除去
+        document.getElementById('schedule-name').textContent = 'カスタム編集';
         insertTargetIndex = -1;
         refreshTimetableStructure("force", activeTitleBefore);
     }
@@ -894,6 +929,8 @@
         const activeTitleBefore = (currentIndex >= 0 && timetableParsed[currentIndex]) ? timetableParsed[currentIndex].title : null;
         
         timetableRaw.splice(index, 1);
+        // 「スケジュール：」の固定文字を除去
+        document.getElementById('schedule-name').textContent = 'カスタム編集';
         refreshTimetableStructure(wasRunning ? true : "force", activeTitleBefore);
     }
 
@@ -905,6 +942,8 @@
         timetableRaw[index] = timetableRaw[newIndex];
         timetableRaw[newIndex] = temp;
 
+        // 「スケジュール：」の固定文字を除去
+        document.getElementById('schedule-name').textContent = 'カスタム編集';
         refreshTimetableStructure("force", null);
     }
 
@@ -1249,6 +1288,11 @@
         };
 
         localStorage.setItem('saved_timetables', JSON.stringify(savedData));
+        
+        // 「スケジュール：」の固定文字を除去して保存名のみ反映
+        document.getElementById('schedule-name').textContent = name;
+        localStorage.setItem('timetable_current_name', name);
+
         nameInput.value = '';
         updateLoadSelectOptions();
         alert(`「${name}」として保存しました！`);
@@ -1276,6 +1320,10 @@
             isPaused = false;
             pauseStartTime = null;
             
+            // 「スケジュール：」の固定文字を除去して表示
+            document.getElementById('schedule-name').textContent = name;
+            localStorage.setItem('timetable_current_name', name);
+            
             refreshTimetableStructure(true); 
             startTimer();                   
         }
@@ -1295,6 +1343,12 @@
             localStorage.setItem('saved_timetables', JSON.stringify(savedData));
             updateLoadSelectOptions();
             select.value = "";
+            
+            const currentName = localStorage.getItem('timetable_current_name');
+            if (currentName === name) {
+                document.getElementById('schedule-name').textContent = '未選択';
+                localStorage.removeItem('timetable_current_name');
+            }
         }
     }
 
@@ -1353,6 +1407,15 @@
         if (!hasValidBackup || timetableRaw.length === 0) {
             baseStartTimeStr = defaultSampleData.baseStartTimeStr;
             timetableRaw = JSON.parse(JSON.stringify(defaultSampleData.timetableRaw));
+            // 「スケジュール：」を除去
+            document.getElementById('schedule-name').textContent = '6時間｜清掃なし (初期プリセット)';
+        } else {
+            const savedCurrentName = localStorage.getItem('timetable_current_name');
+            if (savedCurrentName) {
+                document.getElementById('schedule-name').textContent = savedCurrentName;
+            } else {
+                document.getElementById('schedule-name').textContent = '自動バックアップから復元';
+            }
         }
 
         refreshTimetableStructure(false, null, true);
