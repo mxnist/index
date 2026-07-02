@@ -227,7 +227,7 @@
         .table-list th, .table-list td { border: 1px solid #222; padding: 10px; text-align: left; }
         .table-list th { background-color: #161616; color: #888888; }
         .active-row { background-color: #1a252f !important; color: #ffffff; border-left: 4px solid var(--accent-color); }
-        .storage-zone { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #333; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
+        .storage-zone { padding-bottom: 15px; margin-bottom: 15px; border-bottom: 1px dashed #333; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; }
 
         /* 行内編集用のスタイル調整 */
         .inline-edit-input { width: 100%; box-sizing: border-box; }
@@ -273,6 +273,42 @@
     </div>
 
     <div class="card">
+        <div class="storage-zone">
+            <div class="form-group">
+                <label for="save-name">このスケジュールを保存</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="save-name" placeholder="例: 定例会パターンA" style="width: 150px;">
+                    <button onclick="saveTimetableToStorage()">保存</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="load-select">保存済みから呼び出し</label>
+                <div style="display: flex; gap: 5px;">
+                    <select id="load-select" style="width: 150px;">
+                        <option value="">-- 選択してください --</option>
+                    </select>
+                    <button onclick="loadTimetableFromStorage()">読込</button>
+                    <button class="btn-delete" onclick="deleteTimetableFromStorage()" style="padding: 8px 12px;">削除</button>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="color:#888; font-size:1rem; margin-top:0;">📊 進行スケジュール</h3>
+        <table class="table-list">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">順番</th>
+                    <th style="width: 150px;">時間帯/所要時間</th>
+                    <th>プログラム名</th>
+                    <th style="width: 220px; text-align: center;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="timetable-body">
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
         <h3 style="color:#888; font-size:1rem; margin-top:0;">📋 新しいプログラムを追加 (末尾)</h3>
         <div class="form-row">
             <div class="form-group">
@@ -299,42 +335,6 @@
             <button id="btn-submit" onclick="submitFormItem()" style="margin-top: 20px;">追加する</button>
         </div>
     </div>
-
-    <div class="card">
-        <h3 style="color:#888; font-size:1rem; margin-top:0;">📊 進行スケジュール</h3>
-        <table class="table-list">
-            <thead>
-                <tr>
-                    <th style="width: 40px;">順番</th>
-                    <th style="width: 150px;">時間帯/所要時間</th>
-                    <th>プログラム名</th>
-                    <th style="width: 220px; text-align: center;">操作</th>
-                </tr>
-            </thead>
-            <tbody id="timetable-body">
-            </tbody>
-        </table>
-
-        <div class="storage-zone">
-            <div class="form-group">
-                <label for="save-name">このスケジュールを保存</label>
-                <div style="display: flex; gap: 5px;">
-                    <input type="text" id="save-name" placeholder="例: 定例会パターンA" style="width: 150px;">
-                    <button onclick="saveTimetableToStorage()">保存</button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="load-select">保存済みから呼び出し</label>
-                <div style="display: flex; gap: 5px;">
-                    <select id="load-select" style="width: 150px;">
-                        <option value="">-- 選択してください --</option>
-                    </select>
-                    <button onclick="loadTimetableFromStorage()">読込</button>
-                    <button class="btn-delete" onclick="deleteTimetableFromStorage()" style="padding: 8px 12px;">削除</button>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -351,28 +351,150 @@
     let dayOffset = 0; 
     let pauseStartTime = null; 
 
+    // デフォルトの初期表示データ
     const defaultSampleData = {
         baseStartTimeStr: "07:30",
         timetableRaw: [
-            { duration: 48, title: "登校", sound: false, alertMin: 0 },
+            { duration: 48, title: "登校", sound: false, alertMin: 2 },
             { duration: 7, title: "朝学習", sound: false, alertMin: 0 },
             { duration: 5, title: "朝会", sound: false, alertMin: 0 },
-            { duration: 10, title: "休み時間", sound: false, alertMin: 0 },
+            { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
             { duration: 50, title: "1時間目", sound: false, alertMin: 0 },
-            { duration: 10, title: "休み時間", sound: false, alertMin: 0 },
+            { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
             { duration: 50, title: "2時間目", sound: false, alertMin: 0 },
-            { duration: 10, title: "休み時間", sound: false, alertMin: 0 },
+            { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
             { duration: 50, title: "3時間目", sound: false, alertMin: 0 },
-            { duration: 10, title: "休み時間", sound: false, alertMin: 0 },
+            { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
             { duration: 50, title: "4時間目", sound: false, alertMin: 0 },
             { duration: 40, title: "給食", sound: false, alertMin: 0 },
-            { duration: 30, title: "昼休み", sound: false, alertMin: 0 },
+            { duration: 30, title: "昼休み", sound: false, alertMin: 2 },
             { duration: 50, title: "5時間目", sound: false, alertMin: 0 },
-            { duration: 10, title: "休み時間", sound: false, alertMin: 0 },
+            { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
             { duration: 50, title: "6時間目", sound: false, alertMin: 0 },
-            { duration: 5, title: "休み時間", sound: false, alertMin: 0 },
+            { duration: 5, title: "休み時間", sound: false, alertMin: 2 },
             { duration: 10, title: "帰会", sound: false, alertMin: 0 }
         ]
+    };
+
+    // デフォルトで「保存済みから呼び出し」に入れたい5つのスケジュール定義
+    const defaultPresetTimetables = {
+        "6時間｜清掃なし": {
+            baseStartTimeStr: "07:30",
+            timetableRaw: [
+                { duration: 48, title: "登校", sound: false, alertMin: 2 },
+                { duration: 7, title: "朝学習", sound: false, alertMin: 0 },
+                { duration: 5, title: "朝会", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "1時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "2時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "3時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "4時間目", sound: false, alertMin: 0 },
+                { duration: 40, title: "給食", sound: false, alertMin: 0 },
+                { duration: 30, title: "昼休み", sound: false, alertMin: 2 },
+                { duration: 50, title: "5時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "6時間目", sound: false, alertMin: 0 },
+                { duration: 5, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 10, title: "帰会", sound: false, alertMin: 0 }
+            ]
+        },
+        "6時間｜清掃あり": {
+            baseStartTimeStr: "07:30",
+            timetableRaw: [
+                { duration: 48, title: "登校", sound: false, alertMin: 2 },
+                { duration: 7, title: "朝学習", sound: false, alertMin: 0 },
+                { duration: 5, title: "朝会", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "1時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "2時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "3時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "4時間目", sound: false, alertMin: 0 },
+                { duration: 40, title: "給食", sound: false, alertMin: 0 },
+                { duration: 25, title: "昼休み", sound: false, alertMin: 2 },
+                { duration: 50, title: "5時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "6時間目", sound: false, alertMin: 0 },
+                { duration: 7, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 10, title: "清掃", sound: false, alertMin: 0 },
+                { duration: 8, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 10, title: "帰会", sound: false, alertMin: 0 }
+            ]
+        },
+        "6時間｜諸活動あり": {
+            baseStartTimeStr: "07:30",
+            timetableRaw: [
+                { duration: 48, title: "登校", sound: false, alertMin: 2 },
+                { duration: 7, title: "朝学習", sound: false, alertMin: 0 },
+                { duration: 5, title: "朝会", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "1時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "2時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "3時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "4時間目", sound: false, alertMin: 0 },
+                { duration: 40, title: "給食", sound: false, alertMin: 0 },
+                { duration: 25, title: "昼休み", sound: false, alertMin: 2 },
+                { duration: 50, title: "5時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "6時間目", sound: false, alertMin: 0 },
+                { duration: 5, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 20, title: "諸活動", sound: false, alertMin: 0 },
+                { duration: 5, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 10, title: "帰会", sound: false, alertMin: 0 }
+            ]
+        },
+        "5時間": {
+            baseStartTimeStr: "07:30",
+            timetableRaw: [
+                { duration: 48, title: "登校", sound: false, alertMin: 2 },
+                { duration: 7, title: "朝学習", sound: false, alertMin: 0 },
+                { duration: 5, title: "朝会", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "1時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "2時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "3時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 50, title: "4時間目", sound: false, alertMin: 0 },
+                { duration: 40, title: "給食", sound: false, alertMin: 0 },
+                { duration: 30, title: "昼休み", sound: false, alertMin: 2 },
+                { duration: 50, title: "5時間目", sound: false, alertMin: 0 },
+                { duration: 5, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 10, title: "帰会", sound: false, alertMin: 0 }
+            ]
+        },
+        "6時間｜45分授業": {
+            baseStartTimeStr: "07:30",
+            timetableRaw: [
+                { duration: 48, title: "登校", sound: false, alertMin: 2 },
+                { duration: 7, title: "朝学習", sound: false, alertMin: 0 },
+                { duration: 5, title: "朝会", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 45, title: "1時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 45, title: "2時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 45, title: "3時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 45, title: "4時間目", sound: false, alertMin: 0 },
+                { duration: 40, title: "給食", sound: false, alertMin: 0 },
+                { duration: 30, title: "昼休み", sound: false, alertMin: 2 },
+                { duration: 45, title: "5時間目", sound: false, alertMin: 0 },
+                { duration: 10, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 45, title: "6時間目", sound: false, alertMin: 0 },
+                { duration: 5, title: "休み時間", sound: false, alertMin: 2 },
+                { duration: 10, title: "帰会", sound: false, alertMin: 0 }
+            ]
+        }
     };
 
     let audioCtx = null;
@@ -786,7 +908,6 @@
                 `;
                 tbody.appendChild(row);
             } else {
-                // 【修正箇所】<br> タグを挿入して、(XX分) の表記が必ず次の行から始まるように強制指定
                 row.innerHTML = `
                     <td>${index + 1}</td>
                     <td class="time-range-cell">${itemDateLabel}${item.startStr} 〜 ${item.endStr}<br><span style="color:#555; font-size:0.8rem;">(${timetableRaw[index].duration}分)</span></td>
@@ -845,7 +966,6 @@
                 const cell = row.querySelector('.time-range-cell');
                 if (cell) {
                     let itemDateLabel = (item.start.getDate() !== now.getDate()) ? `<span style="color:#00ffff; font-size:0.75rem; margin-right:4px;">(翌日)</span>` : "";
-                    // 【修正箇所】タイマーの毎秒同期更新時にも、必ず <br> で改行されるように統一
                     cell.innerHTML = `${itemDateLabel}${item.startStr} 〜 ${item.endStr}<br><span style="color:#555; font-size:0.8rem;">(${timetableRaw[index].duration}分)</span>`;
                 }
             }
@@ -1043,10 +1163,6 @@
             return;
         }
 
-        if(timerInterval && !confirm('現在タイマーが動作中、またはプログラムが読み込まれています。上書きしてよろしいですか？')) {
-            return;
-        }
-
         let savedData = JSON.parse(localStorage.getItem('saved_timetables') || '{}');
         if (savedData[name]) {
             pauseTimer();
@@ -1058,8 +1174,11 @@
                 return item;
             });
 
-            refreshTimetableStructure();
-            alert(`「${name}」を読み込みました。`);
+            isPaused = false;
+            pauseStartTime = null;
+            
+            refreshTimetableStructure(true); 
+            startTimer();                   
         }
     }
 
@@ -1102,6 +1221,17 @@
     }
 
     function initLoad() {
+        // ✨ ローカルストレージを強制的に初期プリセットに更新（いつでも上書き、または追加を可能に）
+        let savedData = JSON.parse(localStorage.getItem('saved_timetables') || '{}');
+        
+        // 5つのプリセットがなければマージして登録する
+        Object.keys(defaultPresetTimetables).forEach(key => {
+            if (!savedData[key]) {
+                savedData[key] = defaultPresetTimetables[key];
+            }
+        });
+        localStorage.setItem('saved_timetables', JSON.stringify(savedData));
+
         updateLoadSelectOptions();
 
         const checkBackup = localStorage.getItem('timetable_autobackup');
@@ -1113,7 +1243,7 @@
                 if (parsedBackup.timetableRaw && parsedBackup.timetableRaw.length > 0) {
                     baseStartTimeStr = parsedBackup.baseStartTimeStr || "08:00";
                     timetableRaw = parsedBackup.timetableRaw.map(item => {
-                        if (item.alertMin === undefined || item.alertMin === 1) item.alertMin = 0;
+                        if (item.alertMin === undefined) item.alertMin = 0;
                         return item;
                     });
                     hasValidBackup = true;
