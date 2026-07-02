@@ -66,6 +66,9 @@
             text-align: center;
             padding: 30px 20px;
             transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         /* 【iOS対応】疑似フルスクリーンクラス */
@@ -97,6 +100,7 @@
             margin-bottom: 10px;
             opacity: 0.8;
             letter-spacing: 2px;
+            order: 2; 
         }
         .timer-display.ios-fullscreen .top-info {
             font-size: 3.8rem;
@@ -110,6 +114,7 @@
             font-weight: bold;
             margin-bottom: 10px;
             color: var(--title-color);
+            order: 3;
         }
         .timer-display.ios-fullscreen .current-title {
             font-size: 4.5rem;
@@ -124,6 +129,9 @@
             color: var(--accent-color);
             text-shadow: 0 0 12px rgba(0, 255, 0, 0.4);
             margin: 5px 0;
+            order: 4;
+            width: 100%;
+            white-space: nowrap;
         }
         .timer-display.ios-fullscreen .time-left {
             font-size: 32vh;
@@ -158,6 +166,7 @@
         .next-title {
             font-size: 1.1rem;
             color: #666666;
+            order: 5;
         }
         .timer-display.ios-fullscreen .next-title {
             font-size: 2.5rem;
@@ -171,6 +180,7 @@
             gap: 10px;
             margin-top: 20px;
             min-height: 38px;
+            order: 6;
         }
 
         button {
@@ -199,16 +209,18 @@
         /* 全画面ボタンの配置修正 */
         .fullscreen-btn {
             position: absolute;
-            top: 75px; 
-            right: 15px;
+            top: 20px; 
+            right: 20px;
             font-size: 0.8rem;
             z-index: 10000;
+            order: 1;
         }
         .timer-display.ios-fullscreen .fullscreen-btn {
-            top: 20px;
-            right: 20px;
+            top: 20px !important;
+            right: 20px !important;
             font-size: 1.2rem;
             opacity: 0.4;
+            position: absolute !important;
         }
         .fullscreen-btn:hover {
             opacity: 1.0;
@@ -234,6 +246,7 @@
         .inline-edit-num { width: 70px !important; }
         .insert-row { background-color: #1e1e1e !important; border-left: 4px solid #00ffff; }
 
+        /* 横画面（ランドスケープ）時の指定：既存のちょうど良い調整を維持 */
         @media (max-height: 440px) and (orientation: landscape) {
             .timer-display.ios-fullscreen { padding: 2vh 2vw !important; }
             .timer-display.ios-fullscreen .top-info { font-size: 1.6rem !important; margin-bottom: 1vh !important; }
@@ -249,25 +262,73 @@
             .table-list th, .table-list td { padding: 6px 4px; }
         }
 
-        /* 【追加】iPhone・スマホ縦画面時のレイアウト崩れ対策 */
+        /* 📱 【最重要】iPhone 15 Pro等のスマートフォン縦画面（Portrait）専用の完全最適化 */
         @media (max-width: 480px) and (orientation: portrait) {
-            .timer-display {
-                padding-top: 55px !important; /* ボタンが重ならないよう上部に余白を確保 */
+            /* 通常時（カード内表示）の調整 */
+            .timer-display:not(.ios-fullscreen) {
+                padding: 15px 10px !important;
             }
-            .fullscreen-btn {
-                top: 15px !important;
-                right: 15px !important;
+            .timer-display:not(.ios-fullscreen) .fullscreen-btn {
+                position: static !important;
+                margin-bottom: 15px;
+                width: auto;
             }
-            .timer-display .top-info {
-                font-size: 1.0rem; /* 日付フォントを少し縮小 */
-                letter-spacing: 1px;
+            .timer-display:not(.ios-fullscreen) .top-info {
+                font-size: 1.1rem !important;
+                letter-spacing: 1px !important;
+                margin-bottom: 8px !important;
             }
-            /* 待機中の時計表示（秒を含むHMSクロック形式）の横幅はみ出しを防ぐ */
-            .timer-display #time-left:has(.sec-red) {
-                font-size: 3.5rem !important;
+            .timer-display:not(.ios-fullscreen) .time-left {
+                font-size: 3.2rem !important; 
+                letter-spacing: -1px;
             }
-            .timer-display .sec-red {
-                font-size: 0.6em !important;
+            .timer-display:not(.ios-fullscreen) .sec-red {
+                font-size: 0.75em !important;
+            }
+            .timer-display:not(.ios-fullscreen) .next-title {
+                font-size: 1.0rem !important;
+            }
+
+            /* 🗖 全画面化（フルスクリーン）ボタンを押した直後の縦画面スタイル調整 */
+            .timer-display.ios-fullscreen {
+                padding: 4vh 4vw !important;
+                justify-content: flex-start !important; /* 縦画面時は上から順に綺麗に並べる */
+            }
+            .timer-display.ios-fullscreen .fullscreen-btn {
+                position: static !important;
+                margin-top: 10px;
+                margin-bottom: 4vh;
+                font-size: 1.0rem !important;
+                opacity: 0.6;
+            }
+            /* 縦画面フルスクリーン時の現在時刻 */
+            .timer-display.ios-fullscreen .top-info {
+                font-size: 1.8rem !important; 
+                margin-bottom: 2vh !important;
+                letter-spacing: 1px !important;
+            }
+            /* 縦画面フルスクリーン時の番組名 */
+            .timer-display.ios-fullscreen .current-title {
+                font-size: 2.2rem !important;
+                margin-bottom: 2vh !important;
+                line-height: 1.3;
+            }
+            /* 縦画面フルスクリーン時のタイマー / 待機時計数値 */
+            .timer-display.ios-fullscreen .time-left {
+                font-size: 14vw !important; /* 画面横幅(vw)を基準に最大化し、絶対にはみ出さないように設定 */
+                margin: 3vh 0 !important;
+            }
+            .timer-display.ios-fullscreen .sec-red {
+                font-size: 0.75em !important;
+            }
+            /* 縦画面フルスクリーン時の「次」表示 */
+            .timer-display.ios-fullscreen .next-title {
+                font-size: 1.3rem !important;
+                margin-top: 2vh !important;
+                line-height: 1.4;
+            }
+            .timer-display.ios-fullscreen .controls {
+                margin-top: 3vh !important;
             }
         }
     </style>
@@ -373,7 +434,6 @@
     let dayOffset = 0; 
     let pauseStartTime = null; 
 
-    // デフォルトの初期表示データ
     const defaultSampleData = {
         baseStartTimeStr: "07:30",
         timetableRaw: [
@@ -398,7 +458,6 @@
         ]
     };
 
-    // デフォルトで「保存済みから呼び出し」に入れたい5つのスケジュール定義
     const defaultPresetTimetables = {
         "6時間｜清掃なし": {
             baseStartTimeStr: "07:30",
@@ -660,7 +719,6 @@
         }
     }
 
-    // 待機時のデジタル時計（秒数入り）
     function getHMSClockHTML() {
         const now = new Date();
         const hours = now.getHours().toString().padStart(2, '0');
@@ -789,7 +847,7 @@
         timetableRaw.splice(index + 1, 0, { duration, title, sound: false, alertMin });
         
         insertTargetIndex = -1;
-        refreshTimetableStructure( "force", activeTitleBefore);
+        refreshTimetableStructure("force", activeTitleBefore);
     }
 
     function changeInlineAlertMin(index, val) {
@@ -1244,7 +1302,6 @@
     }
 
     function initLoad() {
-        // ローカルストレージを初期プリセットに更新
         let savedData = JSON.parse(localStorage.getItem('saved_timetables') || '{}');
         
         Object.keys(defaultPresetTimetables).forEach(key => {
