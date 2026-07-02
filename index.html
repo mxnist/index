@@ -262,7 +262,7 @@
             .table-list th, .table-list td { padding: 6px 4px; }
         }
 
-        /* 📱 【最重要】iPhone 15 Pro等のスマートフォン縦画面（Portrait）専用の完全最適化 */
+        /* 📱 iPhone等スマートフォン縦画面（Portrait）専用のレイアウト最適化 */
         @media (max-width: 480px) and (orientation: portrait) {
             /* 通常時（カード内表示）の調整 */
             .timer-display:not(.ios-fullscreen) {
@@ -278,8 +278,9 @@
                 letter-spacing: 1px !important;
                 margin-bottom: 8px !important;
             }
+            /* 通常の通常時の時刻/タイマー表示を大きく見やすく修正 */
             .timer-display:not(.ios-fullscreen) .time-left {
-                font-size: 3.2rem !important; 
+                font-size: 4.2rem !important;  /* 3.2remから大きく拡張 */
                 letter-spacing: -1px;
             }
             .timer-display:not(.ios-fullscreen) .sec-red {
@@ -289,22 +290,23 @@
                 font-size: 1.0rem !important;
             }
 
-            /* 🗖 全画面化（フルスクリーン）ボタンを押した直後の縦画面スタイル調整 */
+            /* 🗖 全画面化（フルスクリーン）ボタンを押した直後の縦画面スタイル */
             .timer-display.ios-fullscreen {
-                padding: 4vh 4vw !important;
-                justify-content: flex-start !important; /* 縦画面時は上から順に綺麗に並べる */
+                padding: 6vh 4vw !important;
+                justify-content: center !important; /* 中央寄せで綺麗に配置 */
             }
             .timer-display.ios-fullscreen .fullscreen-btn {
-                position: static !important;
-                margin-top: 10px;
-                margin-bottom: 4vh;
-                font-size: 1.0rem !important;
-                opacity: 0.6;
+                position: absolute !important;
+                top: 20px !important;
+                right: 20px !important;
+                margin: 0 !important;
+                font-size: 0.9rem !important;
+                opacity: 0.5;
             }
-            /* 縦画面フルスクリーン時の現在時刻 */
+            /* 縦画面フルスクリーン時の日付（小さく、上品に） */
             .timer-display.ios-fullscreen .top-info {
-                font-size: 1.8rem !important; 
-                margin-bottom: 2vh !important;
+                font-size: 1.2rem !important; 
+                margin-bottom: 4vh !important;
                 letter-spacing: 1px !important;
             }
             /* 縦画面フルスクリーン時の番組名 */
@@ -313,18 +315,19 @@
                 margin-bottom: 2vh !important;
                 line-height: 1.3;
             }
-            /* 縦画面フルスクリーン時のタイマー / 待機時計数値 */
+            /* 縦画面フルスクリーン時のメイン時刻/タイマー数値をガツンと最大化（絶対にはみ出さない） */
             .timer-display.ios-fullscreen .time-left {
-                font-size: 14vw !important; /* 画面横幅(vw)を基準に最大化し、絶対にはみ出さないように設定 */
-                margin: 3vh 0 !important;
+                font-size: 17vw !important; /* 14vwから拡張し、画面幅いっぱいに大きく表示 */
+                margin: 4vh 0 !important;
             }
             .timer-display.ios-fullscreen .sec-red {
                 font-size: 0.75em !important;
             }
-            /* 縦画面フルスクリーン時の「次」表示 */
+            /* 縦画面フルスクリーン時の「開始予定 / 次：」表示（小さく控えめにしてバランスを確保） */
             .timer-display.ios-fullscreen .next-title {
-                font-size: 1.3rem !important;
-                margin-top: 2vh !important;
+                font-size: 1.2rem !important; /* 2.5remから適正サイズに縮小 */
+                color: #555555;
+                margin-top: 4vh !important;
                 line-height: 1.4;
             }
             .timer-display.ios-fullscreen .controls {
@@ -900,7 +903,7 @@
         const btn = document.querySelector(`#row-${index} .btn-sound`);
         if (btn) {
             const isSoundOn = timetableRaw[index].sound;
-            btn.className = isSoundOn ? 'btn-sound sound-on' : 'btn-sound sound-off';
+            btn.className = 'btn-sound sound-on';
             btn.title = isSoundOn ? '音をミュートする' : '音を鳴らす';
             btn.textContent = isSoundOn ? '🔊' : '🔇';
         }
