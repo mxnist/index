@@ -248,6 +248,28 @@
             .table-list { font-size: 0.75rem; }
             .table-list th, .table-list td { padding: 6px 4px; }
         }
+
+        /* 【追加】iPhone・スマホ縦画面時のレイアウト崩れ対策 */
+        @media (max-width: 480px) and (orientation: portrait) {
+            .timer-display {
+                padding-top: 55px !important; /* ボタンが重ならないよう上部に余白を確保 */
+            }
+            .fullscreen-btn {
+                top: 15px !important;
+                right: 15px !important;
+            }
+            .timer-display .top-info {
+                font-size: 1.0rem; /* 日付フォントを少し縮小 */
+                letter-spacing: 1px;
+            }
+            /* 待機中の時計表示（秒を含むHMSクロック形式）の横幅はみ出しを防ぐ */
+            .timer-display #time-left:has(.sec-red) {
+                font-size: 3.5rem !important;
+            }
+            .timer-display .sec-red {
+                font-size: 0.6em !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -638,6 +660,7 @@
         }
     }
 
+    // 待機時のデジタル時計（秒数入り）
     function getHMSClockHTML() {
         const now = new Date();
         const hours = now.getHours().toString().padStart(2, '0');
@@ -766,7 +789,7 @@
         timetableRaw.splice(index + 1, 0, { duration, title, sound: false, alertMin });
         
         insertTargetIndex = -1;
-        refreshTimetableStructure("force", activeTitleBefore);
+        refreshTimetableStructure( "force", activeTitleBefore);
     }
 
     function changeInlineAlertMin(index, val) {
@@ -1221,10 +1244,9 @@
     }
 
     function initLoad() {
-        // ✨ ローカルストレージを強制的に初期プリセットに更新（いつでも上書き、または追加を可能に）
+        // ローカルストレージを初期プリセットに更新
         let savedData = JSON.parse(localStorage.getItem('saved_timetables') || '{}');
         
-        // 5つのプリセットがなければマージして登録する
         Object.keys(defaultPresetTimetables).forEach(key => {
             if (!savedData[key]) {
                 savedData[key] = defaultPresetTimetables[key];
